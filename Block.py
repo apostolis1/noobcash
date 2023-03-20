@@ -1,26 +1,28 @@
-import blockchain
+from Blockchain import Blockchain
 from time import time
 from Crypto.Hash import SHA256
 import random
 
 
 class Block:
-	def __init__(self):
+	def __init__(self, index = 0, previousHash = '', nonce = 0):
 		##set
-		self.index = None
-		self.previousHash = None
+		self.index = index
+		self.previousHash = previousHash
 		self.timestamp = time()
-		self.nonce = None
+		self.nonce = nonce
 		self.current_hash = None
 		self.list_of_transactions = []
-
-	def add_transaction(self, transaction):
-		#add a transaction to the block
-		self.list_of_transactions.append(transaction)
+		# self.capacity = None ##pos mporo na paro tin parametro capacity apto config.py?
 
 	def is_full(self, capacity):
 		#check if block has reached max capacity of transactions
 		return len(self.list_of_transactions) == capacity
+	
+	def add_transaction(self, transaction):
+		#add a transaction to the block
+		#if (not self.is_full(self.capacity)):
+		self.list_of_transactions.append(transaction)
 
 	def myHash(self, nonce):
 		#calculate self.hash
