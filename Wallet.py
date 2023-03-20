@@ -18,7 +18,7 @@ class Wallet:
 		key = RSA.generate(2048)
 		self.private_key = key.export_key()
 		self.public_key = key.publickey().export_key("OpenSSH").decode()
-		self_address = self.public_key
+		self.address = self.public_key
 		self.transactions = []
 
 	def balance(self):
