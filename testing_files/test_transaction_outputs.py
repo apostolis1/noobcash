@@ -1,6 +1,6 @@
 from Wallet import Wallet
 from Transaction import Transaction
-from TransactionOutput import TransactionOutput
+import TransactionOutput
 
 def print_utxos(dict_of_utxos):
     for k,v in dict_of_utxos.items():
