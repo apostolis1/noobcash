@@ -42,3 +42,30 @@ def print_utxos(dict_of_utxos):
         print(k)
         for i in v:
             print(i)
+
+
+def transaction_from_dict(transaction_dict: dict) -> Transaction:
+    # Helper function to create a Transaction Object from the corresponding dict
+    # The dict should be created via the to_dict() method
+    # Used when a transaction is converted to dict and transmitted via the rest api
+    sender_address = transaction_dict["sender_address"]
+    receiver_address = transaction_dict["receiver_address"]
+    amount = transaction_dict["amount"]
+    signature = transaction_dict["signature"]
+    transaction_id = transaction_dict["transaction_id"]
+    transaction_inputs = transaction_dict["transaction_inputs"]
+    transaction_outputs = [transaction_output_from_dict(i) for i in transaction_dict["transaction_outputs"]]
+    t = Transaction(sender_address, receiver_address, amount, transaction_inputs, transaction_id, signature, transaction_outputs)
+    return t
+
+
+def transaction_output_from_dict(transaction_output_dict: dict) -> TransactionOutput:
+    # Helper function to create a TransactionOutput Object from the corresponding dict
+    # The dict should be created via the to_dict() method
+    # Used when a TransactionOutput is converted to dict and transmitted via the rest api
+    transaction_id = transaction_output_dict["transaction_id"]
+    recipient = transaction_output_dict["recipient"]
+    amount = transaction_output_dict["amount"]
+    unique_id = transaction_output_dict["unique_id"]
+    transaction_output = TransactionOutput(transaction_id, recipient, amount, unique_id)
+    return transaction_output
