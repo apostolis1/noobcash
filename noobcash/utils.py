@@ -1,4 +1,5 @@
 from noobcash.Blockchain import Blockchain
+from noobcash.Block import Block
 from noobcash.Wallet import Wallet
 from noobcash.Transaction import Transaction
 from noobcash.TransactionOutput import TransactionOutput
@@ -69,3 +70,14 @@ def transaction_output_from_dict(transaction_output_dict: dict) -> TransactionOu
     unique_id = transaction_output_dict["unique_id"]
     transaction_output = TransactionOutput(transaction_id, recipient, amount, unique_id)
     return transaction_output
+
+
+def block_from_dict(block_dict: dict) -> Block:
+    index = block_dict["index"]
+    previous_hash = block_dict["previousHash"]
+    timestamp = block_dict["timestamp"]
+    nonce = block_dict["nonce"]
+    current_hash = block_dict["current_hash"]
+    transactions = [transaction_from_dict(i) for i in block_dict["transactions"]]
+    block = Block(index, previous_hash, nonce, current_hash, transactions, timestamp)
+    return block
