@@ -4,7 +4,9 @@ import random
 
 
 class Block:
-	def __init__(self, index=0, previous_hash='', nonce=0, current_hash=None, list_of_transactions=[], timestamp=None):
+	def __init__(self, index=0, previous_hash='', nonce=0, current_hash=None, list_of_transactions=None, timestamp=None):
+		if list_of_transactions is None:
+			list_of_transactions = []
 		self.index = index
 		self.previousHash = previous_hash
 		if timestamp is not None:

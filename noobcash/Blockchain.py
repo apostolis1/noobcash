@@ -5,7 +5,9 @@ from noobcash.TransactionOutput import TransactionOutput
 
 
 class Blockchain:
-    def __init__(self, nodes, chain=[]) -> None:
+    def __init__(self, nodes, chain=None) -> None:
+        if chain is None:
+            chain = []
         self.chain: list = chain
         self.nodes = nodes
 
