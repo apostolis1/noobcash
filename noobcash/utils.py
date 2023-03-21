@@ -81,3 +81,10 @@ def block_from_dict(block_dict: dict) -> Block:
     transactions = [transaction_from_dict(i) for i in block_dict["transactions"]]
     block = Block(index, previous_hash, nonce, current_hash, transactions, timestamp)
     return block
+
+
+def blockchain_from_dict(blockchain_dict: dict) -> Blockchain:
+    nodes = blockchain_dict["nodes"]
+    chain = [block_from_dict(i) for i in blockchain_dict["chain"]]
+    blockchain = Blockchain(nodes, chain)
+    return blockchain
