@@ -2,6 +2,7 @@ from flask import Flask
 import requests
 from noobcash.Wallet import Wallet
 from noobcash.Blockchain import Blockchain
+from noobcash.utils import *
 
 
 def create_app(port, is_first=False):
@@ -38,10 +39,19 @@ def create_app(port, is_first=False):
             }
             register_url = f"{master_url}/register"
             res = requests.get(url=register_url, params=data)
+            # Get the current blockchain from bootstrap node
+            blockchain_url = f"{master_url}/blockchain"
+            blockchain_dict = requests.get(url=blockchain_url).json()
+            blockchain = blockchain_from_dict(blockchain_dict)
+            utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
+            cache.set("utxos", utxos_dict)
+            cache.set("blockchain", blockchain)
             # print(res.json())
         # Master node should create the genesis block and add itself on the list of nodes
         else:
             blockchain.GenesisBlock(bootstrap_address=public_key)
+            utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
+            cache.set("utxos", utxos_dict)
             cache.set("blockchain", blockchain)
             master_node = {
                 f"id_0": {

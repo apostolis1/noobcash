@@ -1,9 +1,11 @@
 import threading
+import time
 
 import requests
 from flask import Flask, jsonify, session, current_app, request
 from flask import Blueprint
 from rest_app.common import cache
+from noobcash.utils import *
 
 route_blueprint = Blueprint('route_blueprint', __name__)
 
@@ -42,7 +44,14 @@ def register_node():
             }
         }
     )
-
+    # Create the transaction to transfer 100 nbc to new node
+    blockchain = cache.get("blockchain")
+    my_wallet: Wallet = cache.get("wallet")
+    utxos = cache.get("utxos")
+    t = create_transaction(my_wallet, public_key, 100, utxos)
+    t.sign_transaction(my_wallet.private_key)
+    t_dict = t.to_dict()
+    threading.Thread(target=send_transaction, args=[t_dict]).start()
     cache.set("nodes", existing_nodes)
     print(existing_nodes)
     print(f"Assigned node id {new_node_id} to ...")
@@ -67,6 +76,9 @@ def notify_nodes(existing_nodes):
         res = requests.get(url=url, json=data)
     return
 
+def send_transaction(transaction_dict):
+    time.sleep(1)
+    requests.post("http://127.0.0.1:5001/transactions/create", json=transaction_dict)
 
 @route_blueprint.route(rule="/nodes/info")
 def get_nodes_info():
@@ -82,3 +94,33 @@ def all_nodes_info():
     node_info = cache.get("nodes")
     print(node_info)
     return node_info, 200
+
+
+@route_blueprint.route(rule="/blockchain")
+def get_blockchain():
+    blockchain = cache.get("blockchain")
+    return blockchain.to_dict(), 200
+
+
+@route_blueprint.route(rule="/transactions/create", methods=['POST'])
+def create_transaction_endpoint():
+    # Endpoint where each node is listening for new transactions to be broadcasted
+    transaction_dict = request.json
+    print(transaction_dict)
+    print("Received transaction")
+    t = transaction_from_dict(transaction_dict)
+    blockchain = cache.get("blockchain")
+    last_block: Block = blockchain.getLastBlock()
+    last_block.add_transaction(t)
+    utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
+    cache.set("blockchain", blockchain)
+    cache.set("utxos", utxos_dict)
+    return "Success", 200
+
+@route_blueprint.route(rule="/utxos/get")
+def get_utxos_dict():
+    utxos_dict = cache.get("utxos")
+    res = {}
+    for k in utxos_dict.keys():
+        res[k] = [i.to_dict() for i in utxos_dict[k]]
+    return res, 200
