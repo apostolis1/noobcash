@@ -3,11 +3,14 @@ from time import time
 
 
 class TransactionOutput:
-    def __init__(self, transaction_id, recipient, amount):
+    def __init__(self, transaction_id, recipient, amount, unique_id=None):
         self.transaction_id = transaction_id
         self.recipient = recipient
         self.amount = amount
-        self.unique_id = self.get_unique_id()
+        if unique_id is not None:
+            self.unique_id = unique_id
+        else:
+            self.unique_id = self.get_unique_id()
 
     def get_unique_id(self):
         value_to_hash = self.transaction_id + self.recipient + str(self.amount) + str(time())
@@ -25,3 +28,8 @@ class TransactionOutput:
             "unique_id": self.unique_id,
         }
         return res
+
+    def __eq__(self, other):
+        if not isinstance(other, TransactionOutput):
+            return False
+        return self.transaction_id == other.transaction_id and self.amount == other.amount and self.recipient == other.recipient and self.unique_id == other.unique_id
