@@ -5,10 +5,9 @@ import random
 
 
 class Block:
-	def __init__(self, index = 0, previousHash = '', nonce = 0):
-		##set
+	def __init__(self, index=0, previous_hash='', nonce=0):
 		self.index = index
-		self.previousHash = previousHash
+		self.previousHash = previous_hash
 		self.timestamp = time()
 		self.nonce = nonce
 		self.current_hash = None
@@ -16,16 +15,16 @@ class Block:
 		# self.capacity = None ##pos mporo na paro tin parametro capacity apto config.py?
 
 	def is_full(self, capacity):
-		#check if block has reached max capacity of transactions
+		# check if block has reached max capacity of transactions
 		return len(self.list_of_transactions) == capacity
 	
 	def add_transaction(self, transaction):
-		#add a transaction to the block
-		#if (not self.is_full(self.capacity)):
+		# add a transaction to the block
+		# if (not self.is_full(self.capacity)):
 		self.list_of_transactions.append(transaction)
 
-	def myHash(self, nonce):
-		#calculate self.hash
+	def my_hash(self, nonce):
+		# calculate self.hash
 		transaction_hash_list = [i.calculate_hash().hexdigest() for i in self.list_of_transactions]
 		transaction_hash = ''.join(transaction_hash_list)
 		value_to_hash = self.previousHash + transaction_hash + nonce 
@@ -33,16 +32,14 @@ class Block:
 		return hash_object.hexdigest()
 	
 	def get_nonce(self, difficulty):
-		#try random values until block is valid
+		# try random values until block is valid
 		nonce_attempt = 0
-		while(not self.myHash(nonce_attempt).startswith('0'*difficulty)):
+		while not self.my_hash(nonce_attempt).startswith('0' * difficulty):
 			nonce_attempt = random.random()
 		self.nonce = nonce_attempt
-		self.current_hash = self.myHash(self.nonce)
+		self.current_hash = self.my_hash(self.nonce)
 		return
 
-	def validate_block(self,difficulty):
-		#validate the block of transactions
-		if (self.current_hash.startswith('0'*difficulty)):
-			return True
-		return False
+	def validate_block(self, difficulty):
+		# validate the block of transactions
+		return self.current_hash.startswith('0' * difficulty)

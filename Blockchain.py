@@ -8,10 +8,11 @@ class Blockchain:
         self.nodes = nodes
 
     def GenesisBlock(self, bootstrap_address):
-        genesis = Block(index=0, previousHash = '1', nonce = 0)
+        genesis = Block(index=0, previous_hash='1', nonce = 0)
+        # TODO: Add transaction_inputs
         genesis_transaction = Transaction(sender_address = '0', recipient_address = bootstrap_address, value = 100*self.nodes)
         genesis.add_transaction(genesis_transaction)
-        genesis.current_hash = genesis.myHash(nonce = 0)
+        genesis.current_hash = genesis.my_hash(nonce = 0)
         self.chain.append(genesis)
         return
 
