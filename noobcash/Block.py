@@ -42,3 +42,14 @@ class Block:
 	def validate_block(self, difficulty):
 		# validate the block of transactions
 		return self.current_hash.startswith('0' * difficulty)
+
+	def to_dict(self):
+		res = {
+			"index": self.index,
+			"previousHash": self.previousHash,
+			"timestamp": self.timestamp,
+			"nonce": self.nonce,
+			"current_hash": self.current_hash,
+			"transactions": [i.to_dict() for i in self.list_of_transactions]
+		}
+		return res

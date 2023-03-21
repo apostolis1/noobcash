@@ -16,3 +16,12 @@ class TransactionOutput:
 
     def __str__(self):
         return f"Transaction Id: {self.transaction_id} Recipient:{self.recipient} Amount: {self.amount} UniqueId: {self.unique_id}"
+
+    def to_dict(self):
+        res = {
+            "transaction_id": self.transaction_id,
+            "recipient": self.recipient,
+            "amount": self.amount,
+            "unique_id": self.unique_id,
+        }
+        return res

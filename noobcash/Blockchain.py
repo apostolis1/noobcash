@@ -29,4 +29,12 @@ class Blockchain:
             if (not (block.validate_block() and self.chain[idx-1].current_hash == block.previousHash)):
                 return False
         return True
-            
+
+    def to_dict(self):
+        chain_list = [i.to_dict() for i in self.chain]
+        print(chain_list)
+        res = {
+            "chain": chain_list,
+            "nodes": self.nodes
+        }
+        return res
