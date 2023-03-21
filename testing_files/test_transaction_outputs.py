@@ -1,12 +1,13 @@
 from Wallet import Wallet
 from Transaction import Transaction
-import TransactionOutput
+from TransactionOutput import TransactionOutput
 
 def print_utxos(dict_of_utxos):
     for k,v in dict_of_utxos.items():
         print(k)
         for i in v:
             print(i)
+
 
 wallet1 = Wallet()
 wallet2 = Wallet()
@@ -40,7 +41,7 @@ for i in inputs:
             print("found")
             dict_of_utxos[address_to_id[i.recipient]].remove(j)
 
-transaction = Transaction(sender_address=wallet1.address, sender_private_key=wallet1.private_key, recipient_address=wallet2.address, value=5, transaction_inputs=inputs)
+transaction = Transaction(sender_address=wallet1.address, recipient_address=wallet2.address, value=5, transaction_inputs=inputs)
 outputs = transaction.create_transaction_outputs(previous_amount)
 transaction.transaction_outputs = outputs
 transaction.sign_transaction(wallet1.private_key)
@@ -70,7 +71,7 @@ for i in inputs:
             print("found")
             dict_of_utxos[address_to_id[i.recipient]].remove(j)
 
-transaction = Transaction(sender_address=wallet2.address, sender_private_key=wallet2.private_key, recipient_address=wallet1.address, value=105, transaction_inputs=inputs)
+transaction = Transaction(sender_address=wallet2.address, recipient_address=wallet1.address, value=105, transaction_inputs=inputs)
 outputs = transaction.create_transaction_outputs(previous_amount)
 transaction.transaction_outputs = outputs
 transaction.sign_transaction(wallet1.private_key)
