@@ -33,7 +33,10 @@ def create_transaction(sender_wallet: Wallet, receiver_address, amount, utxos_di
     # update the list of utxos
     for i in outputs:
         # print(i)
-        utxos_dict[i.recipient].append(i)
+        try:
+            utxos_dict[i.recipient].append(i)
+        except KeyError:
+            utxos_dict[i.recipient] = [i]
     transaction.sign_transaction(sender_wallet.private_key)
     return transaction
 
@@ -88,3 +91,13 @@ def blockchain_from_dict(blockchain_dict: dict) -> Blockchain:
     chain = [block_from_dict(i) for i in blockchain_dict["chain"]]
     blockchain = Blockchain(nodes, chain)
     return blockchain
+
+
+def create_utxos_dict_from_transaction_list(transaction_list: list):
+    d = {}
+    for transaction_output in transaction_list:
+        try:
+            d[transaction_output.recipient].append(transaction_output)
+        except Exception as e:
+            d[transaction_output.recipient] = [transaction_output]
+    return d

@@ -100,3 +100,34 @@ def test_blockchain_to_dict():
     blockchain_dict = blockchain.to_dict()
     blockchain_2 = blockchain_from_dict(blockchain_dict)
     assert blockchain == blockchain_2
+
+
+def test_utxos_from_genesis_blockchain():
+    w1 = Wallet()
+    nodes = randint(1, 15)
+    blockchain = Blockchain(nodes)
+    blockchain.GenesisBlock(w1.address)
+    utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
+    print(utxos_dict)
+    assert len(utxos_dict[w1.address]) == 1
+    assert sum([i.amount for i in utxos_dict[w1.address]]) == nodes*100
+
+
+def test_utxos_from_complex_blockchain():
+    w1 = Wallet()
+    w2 = Wallet()
+    nodes = randint(1, 15)
+    initial_amount = nodes*100
+    amount_to_transfer = randint(1, initial_amount)
+    blockchain = Blockchain(nodes)
+    blockchain.GenesisBlock(w1.address)
+    utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
+    t = create_transaction(w1, w2.address, amount_to_transfer, utxos_dict)
+    last_block: Block = blockchain.getLastBlock()
+    last_block.add_transaction(t)
+    utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
+    print(utxos_dict)
+    assert len(utxos_dict[w1.address]) == 1
+    assert len(utxos_dict[w2.address]) == 1
+    assert sum([i.amount for i in utxos_dict[w1.address]]) + sum([i.amount for i in utxos_dict[w2.address]]) == initial_amount
+    # assert sum([i.amount for i in utxos_dict[w1.address]]) == nodes * 100
