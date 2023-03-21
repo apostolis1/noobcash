@@ -7,15 +7,15 @@ from noobcash.TransactionOutput import TransactionOutput
 
 class Transaction:
 
-    def __init__(self, sender_address: str, recipient_address: str, value: int, transaction_inputs: list):
+    def __init__(self, sender_address: str, recipient_address: str, value: int, transaction_inputs: list,transaction_id="1", signature=None, transaction_outputs=[]):
         # Transaction()
         self.sender_address = sender_address
         self.receiver_address = recipient_address
         self.amount = value
-        self.signature = None
-        self.transaction_id = "1"
+        self.signature = signature
+        self.transaction_id = transaction_id
         self.transaction_inputs = transaction_inputs
-        self.transaction_outputs = []
+        self.transaction_outputs = transaction_outputs
         # self.sender_address: To public key του wallet από το οποίο προέρχονται τα χρήματα
         # self.receiver_address: To public key του wallet στο οποίο θα καταλήξουν τα χρήματα
         # self.amount: το ποσό που θα μεταφερθεί
@@ -85,3 +85,19 @@ class Transaction:
         recipient_output = TransactionOutput(self.transaction_id, self.receiver_address, self.amount)
         sender_output = TransactionOutput(self.transaction_id, self.sender_address, sender_amount_before - self.amount)
         return [recipient_output, sender_output]
+
+    def __eq__(self, other):
+        if not isinstance(other, Transaction):
+            return False
+        if not self.transaction_id == other.transaction_id and self.amount == other.amount and self.sender_address == other.sender_address and self.signature == other.signature:
+            return False
+        for i in self.transaction_inputs:
+            if i not in other.transaction_inputs:
+                return False
+        for i in self.transaction_outputs:
+            if i not in other.transaction_outputs:
+                return False
+        return True
+
+    def __str__(self):
+        return f"sender_address: {self.sender_address}, receiver_address: {self.receiver_address}, amount: {self.amount}, signature: {self.signature}"
