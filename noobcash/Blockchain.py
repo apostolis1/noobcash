@@ -2,9 +2,10 @@ from noobcash.Block import Block
 import time
 from noobcash.Transaction import Transaction
 
+
 class Blockchain:
-    def __init__(self, nodes) -> None:
-        self.chain = []
+    def __init__(self, nodes, chain=[]) -> None:
+        self.chain = chain
         self.nodes = nodes
 
     def GenesisBlock(self, bootstrap_address):
@@ -38,3 +39,14 @@ class Blockchain:
             "nodes": self.nodes
         }
         return res
+
+    def __eq__(self, other):
+        if not isinstance(other, Blockchain):
+            return False
+        for i, _ in enumerate(self.chain):
+            if self.chain[i] != other.chain[i]:
+                return False
+        for i, _ in enumerate(other.chain):
+            if self.chain[i] != other.chain[i]:
+                return False
+        return self.nodes == other.nodes
