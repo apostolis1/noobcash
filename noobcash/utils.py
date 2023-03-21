@@ -55,9 +55,12 @@ def transaction_from_dict(transaction_dict: dict) -> Transaction:
     sender_address = transaction_dict["sender_address"]
     receiver_address = transaction_dict["receiver_address"]
     amount = transaction_dict["amount"]
-    signature = transaction_dict["signature"]
+    if transaction_dict["signature"] is None:
+        signature = None
+    else:
+        signature = bytes.fromhex(transaction_dict["signature"])
     transaction_id = transaction_dict["transaction_id"]
-    transaction_inputs = transaction_dict["transaction_inputs"]
+    transaction_inputs = [transaction_output_from_dict(i) for i in transaction_dict["transaction_inputs"]]
     transaction_outputs = [transaction_output_from_dict(i) for i in transaction_dict["transaction_outputs"]]
     t = Transaction(sender_address, receiver_address, amount, transaction_inputs, transaction_id, signature, transaction_outputs)
     return t

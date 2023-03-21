@@ -7,8 +7,11 @@ from noobcash.TransactionOutput import TransactionOutput
 
 class Transaction:
 
-    def __init__(self, sender_address: str, recipient_address: str, value: int, transaction_inputs: list,transaction_id="1", signature=None, transaction_outputs=[]):
+    def __init__(self, sender_address: str, recipient_address: str, value: int, transaction_inputs: list, transaction_id="1", signature=None,
+                 transaction_outputs=None):
         # Transaction()
+        if transaction_outputs is None:
+            transaction_outputs = []
         self.sender_address = sender_address
         self.receiver_address = recipient_address
         self.amount = value
@@ -27,13 +30,17 @@ class Transaction:
         # selfSignature
 
     def to_dict(self):
+        if self.signature is None:
+            signature = None
+        else:
+            signature = self.signature.hex()
         res = {
             "sender_address": self.sender_address,
             "receiver_address": self.receiver_address,
             "amount": self.amount,
-            "signature": self.signature,
+            "signature": signature,
             "transaction_id":  self.transaction_id,
-            "transaction_inputs":  self.transaction_inputs,
+            "transaction_inputs":  [i.to_dict() for i in self.transaction_inputs],
             "transaction_outputs": [i.to_dict() for i in self.transaction_outputs]
         }
         return res
