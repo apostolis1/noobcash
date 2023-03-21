@@ -19,14 +19,20 @@ def get_transactions():
 
 @route_blueprint.route(rule="/register")
 def register_node():
+    # Endpoint where the bootstrap node is waiting for the info from other nodes
+    # Is responsible for everything that should be done when a node is trying to enter the system
+    # meaning sending the blockchain copy, notifying all the nodes about the info of the entire network once
+    # all the nodes have been registered
     ip_addr = request.args.get('ip')
     port = request.args.get('port')
     public_key = request.args.get('public_key')
     print(f"Received registration request from ip {ip_addr} at port {port} with public_key {public_key}")
+    # Add node to existing nodes
     existing_nodes = cache.get("nodes")
     if existing_nodes is None:
         existing_nodes = []
         print("Existing nodes is empty")
+    # Assign id to node
     new_node_id = len(existing_nodes)
     existing_nodes.append(
         {
@@ -42,14 +48,7 @@ def register_node():
     print(f"Assigned node id {new_node_id} to ...")
     if len(existing_nodes) == current_app.config["NUMBER_OF_NODES"]:
         print("All nodes are here, sending information to them")
-        # for node in existing_nodes:
-        #     url = f"http://{list(node.values())[0]}/nodes/info"
-        #     url = "http://127.0.0.1:5001/nodes/info"
-        #     print(url)
-        #     data = {
-        #         "nodes": existing_nodes
-        #     }
-        #     res = requests.get(url=url)
+        # Create new thread to notify the nodes of the network info
         threading.Thread(target=notify_nodes, args=[existing_nodes]).start()
     return jsonify({
             f"id_{new_node_id}": f"{ip_addr}:{port}"
@@ -57,10 +56,10 @@ def register_node():
 
 
 def notify_nodes(existing_nodes):
+    # Notifies all the nodes that are already registered
     for node in existing_nodes:
         ip_addr = node[list(node.keys())[0]]['url']
         url = f"http://{ip_addr}/nodes/info"
-        # url = "http://127.0.0.1:5001/nodes/info"
         print(url)
         data = {
             "nodes": existing_nodes
@@ -79,6 +78,7 @@ def get_nodes_info():
 
 @route_blueprint.route(rule="/nodes/all")
 def all_nodes_info():
+    # Endpoint to return information the node has about all the other nodes in the network
     node_info = cache.get("nodes")
     print(node_info)
     return node_info, 200
