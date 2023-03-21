@@ -4,13 +4,16 @@ import random
 
 
 class Block:
-	def __init__(self, index=0, previous_hash='', nonce=0):
+	def __init__(self, index=0, previous_hash='', nonce=0, current_hash=None, list_of_transactions=[], timestamp=None):
 		self.index = index
 		self.previousHash = previous_hash
-		self.timestamp = time()
+		if timestamp is not None:
+			self.timestamp = timestamp
+		else:
+			self.timestamp = time()
 		self.nonce = nonce
-		self.current_hash = None
-		self.list_of_transactions = []
+		self.current_hash = current_hash
+		self.list_of_transactions = list_of_transactions
 		# self.capacity = None ##pos mporo na paro tin parametro capacity apto config.py?
 
 	def is_full(self, capacity):
@@ -53,3 +56,13 @@ class Block:
 			"transactions": [i.to_dict() for i in self.list_of_transactions]
 		}
 		return res
+
+	def __eq__(self, other):
+		if not isinstance(other, Block):
+			return False
+		if not self.index == other.index and self.nonce == other.nonce and self.timestamp == other.timestamp and self.current_hash == other.current_hash and self.previousHash == other.previousHash:
+			return False
+		for i in self.list_of_transactions:
+			if i not in other.list_of_transactions:
+				return False
+		return True
