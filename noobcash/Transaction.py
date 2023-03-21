@@ -2,7 +2,7 @@ from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
 # from Crypto.Cipher import PKCS1_v1_5
-from TransactionOutput import TransactionOutput
+from noobcash.TransactionOutput import TransactionOutput
 
 
 class Transaction:

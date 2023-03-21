@@ -1,6 +1,3 @@
-import Block
-import Wallet
-
 class node:
 	def __init__(self):
 		self.NBC=100;

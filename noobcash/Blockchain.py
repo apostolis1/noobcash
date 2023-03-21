@@ -1,6 +1,6 @@
-from Block import Block
+from noobcash.Block import Block
 import time
-from Transaction import Transaction
+from noobcash.Transaction import Transaction
 
 class Blockchain:
     def __init__(self, nodes) -> None:
@@ -10,7 +10,7 @@ class Blockchain:
     def GenesisBlock(self, bootstrap_address):
         genesis = Block(index=0, previous_hash='1', nonce = 0)
         # TODO: Add transaction_inputs
-        genesis_transaction = Transaction(sender_address = '0', recipient_address = bootstrap_address, value = 100*self.nodes)
+        genesis_transaction = Transaction(sender_address = '0', recipient_address = bootstrap_address, value = 100*self.nodes, transaction_inputs=[])
         genesis.add_transaction(genesis_transaction)
         genesis.current_hash = genesis.my_hash(nonce = 0)
         self.chain.append(genesis)

@@ -1,4 +1,3 @@
-from Blockchain import Blockchain
 from time import time
 from Crypto.Hash import SHA256
 import random
@@ -27,7 +26,7 @@ class Block:
 		# calculate self.hash
 		transaction_hash_list = [i.calculate_hash().hexdigest() for i in self.list_of_transactions]
 		transaction_hash = ''.join(transaction_hash_list)
-		value_to_hash = self.previousHash + transaction_hash + nonce 
+		value_to_hash = self.previousHash + transaction_hash + str(nonce)
 		hash_object = SHA256.new(data=value_to_hash.encode())
 		return hash_object.hexdigest()
 	

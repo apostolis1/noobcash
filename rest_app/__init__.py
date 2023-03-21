@@ -1,6 +1,7 @@
-from flask import Flask, session
+from flask import Flask
 import requests
-from Wallet import Wallet
+from noobcash.Wallet import Wallet
+from noobcash.Blockchain import Blockchain
 
 
 def create_app(port, is_first=False):
@@ -14,15 +15,14 @@ def create_app(port, is_first=False):
         app.register_blueprint(routes.route_blueprint)
         # cache.init_app(app=app, config={"CACHE_TYPE": "filesystem", 'CACHE_DIR': '/tmp'})
         cache.init_app(app=app, config={"CACHE_TYPE": "simple"})
-        if is_first:
-            cache.clear()
-        cache.set("Transactions", {
-            "A": 8746516,
-            "B": 1451545
-        })
+        cache.clear()
+
         cache.set("PORT", port)
         master_url = "http://127.0.0.1:5000"
         print("Starting...")
+        # Create a local copy of the blockchain
+        blockchain = Blockchain(5)
+        cache.set("blockchain", blockchain)
         # Create my wallet
         wallet = Wallet()
         public_key = wallet.get_public_key()
@@ -39,8 +39,10 @@ def create_app(port, is_first=False):
             register_url = f"{master_url}/register"
             res = requests.get(url=register_url, params=data)
             # print(res.json())
-        # Master node should add itself on the list of nodes
+        # Master node should create the genesis block and add itself on the list of nodes
         else:
+            blockchain.GenesisBlock(bootstrap_address=public_key)
+            cache.set("blockchain", blockchain)
             master_node = {
                 f"id_0": {
                     "url": f"127.0.0.1:{port}",
