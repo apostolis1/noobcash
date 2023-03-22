@@ -48,6 +48,7 @@ class Block:
 		return
 
 	def validate_block(self, difficulty):
+		# TODO: Maybe change this so it accepts a previous_block so it can check previous_block.current_hash == self.previousHash
 		# validate the block of transactions
 		return self.current_hash.startswith('0' * difficulty)
 
