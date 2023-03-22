@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, current_app
 import requests
 from noobcash.Wallet import Wallet
 from noobcash.Blockchain import Blockchain
@@ -22,19 +22,20 @@ def create_app(port, is_first=False):
         cache.set("PORT", port)
         master_url = "http://127.0.0.1:5000"
         print("Starting...")
+        nodes = current_app.config["NUMBER_OF_NODES"]
         if is_first:
-            blockchain = Blockchain(5)
+            blockchain = Blockchain(nodes)
             node = Node()
             blockchain.GenesisBlock(node.wallet.public_key)
             node.blockchain = blockchain
             utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
             master_node = {
-                f"id_0": {
+                "id_0": {
                     "url": f"127.0.0.1:{port}",
                     "public_key": node.wallet.public_key
                 }
             }
-            node.ring = [master_node]
+            node.ring = master_node
             node.utxos_dict = utxos_dict
             cache.set("node", node)
 

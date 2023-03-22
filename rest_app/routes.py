@@ -37,18 +37,14 @@ def register_node():
     # Add node to existing nodes
     existing_nodes = node.ring
     if existing_nodes is None:
-        existing_nodes = []
+        existing_nodes = {}
         print("Existing nodes is empty")
     # Assign id to node
     new_node_id = len(existing_nodes)
-    existing_nodes.append(
-        {
-            f"id_{new_node_id}":  {
-                "url": f"{ip_addr}:{port}",
-                "public_key": public_key
-            }
-        }
-    )
+    existing_nodes[f"id_{new_node_id}"] = {
+        "url": f"{ip_addr}:{port}",
+        "public_key": public_key
+    }
     # Create the transaction to transfer 100 nbc to new node
     # blockchain = cache.get("blockchain")
     my_wallet: Wallet = node.wallet
@@ -58,7 +54,7 @@ def register_node():
     t_dict = t.to_dict()
     with open('convert.json', 'w+') as convert_file:
         convert_file.write(json.dumps(t_dict))
-    threading.Thread(target=send_transaction, args=[t_dict]).start()
+    threading.Thread(target=node.broadcast_transaction, args=[t]).start()
 
     print(existing_nodes)
     print(f"Assigned node id {new_node_id} to ...")
@@ -72,10 +68,10 @@ def register_node():
         }), 200
 
 
-def notify_nodes(existing_nodes):
+def notify_nodes(existing_nodes: dict):
     # Notifies all the nodes that are already registered
-    for node in existing_nodes:
-        ip_addr = node[list(node.keys())[0]]['url']
+    for node in existing_nodes.values():
+        ip_addr = node['url']
         url = f"http://{ip_addr}/nodes/info"
         print(url)
         data = {
@@ -93,14 +89,20 @@ def send_transaction(transaction_dict):
 def get_nodes_info():
     node_info = request.json
     print(node_info)
-    cache.set("nodes", node_info)
+    node: Node = cache.get("node")
+    if node is None:
+        raise Exception("Node not found")
+    # TODO Make sure that the node is created and set in cache
+    node.ring = node_info
+    cache.set("node", node)
     return "Success", 200
 
 
 @route_blueprint.route(rule="/nodes/all")
 def all_nodes_info():
     # Endpoint to return information the node has about all the other nodes in the network
-    node_info = cache.get("nodes")
+    node: Node = cache.get("node")
+    node_info = node.ring
     print(node_info)
     return node_info, 200
 
@@ -120,6 +122,7 @@ def create_transaction_endpoint():
     # print(transaction_dict)
     print("Received transaction")
     t = transaction_from_dict(transaction_dict)
+    t.verify()
     blockchain = node.blockchain
     last_block: Block = blockchain.getLastBlock()
     last_block.add_transaction(t)
