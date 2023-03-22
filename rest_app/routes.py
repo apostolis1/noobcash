@@ -137,3 +137,22 @@ def get_utxos_dict():
     for k in utxos_dict.keys():
         res[k] = [i.to_dict() for i in utxos_dict[k]]
     return jsonify(res), 200
+
+
+@route_blueprint.route(rule="/blocks/create", methods=['POST'])
+def create_block_endpoint():
+    # TODO: Complete this
+    # Endpoint where each node is listening for new blocks to be broadcast
+    # Should check if we are mining already and stop in that case
+    node: Node = cache.get("node")
+    block_dict = request.json
+    print("Received block")
+    b = block_from_dict(block_dict)
+    blockchain = node.blockchain
+    if not b.validate_block(difficulty=blockchain.difficulty):
+        print("Block is not valid")
+        return "Failed", 400
+    if threading.
+    # TODO: Make sure utxos get updated, maybe call generate_utxos_from_chain ?
+    cache.set("node", node)
+    return "Success", 200
