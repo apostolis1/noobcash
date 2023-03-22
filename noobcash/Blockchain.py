@@ -1,3 +1,5 @@
+import threading
+
 from noobcash.Block import Block
 import time
 from noobcash.Transaction import Transaction
@@ -42,6 +44,9 @@ class Blockchain:
         last_block = self.getLastBlock()
         if last_block.is_full():
             last_block.get_nonce(difficulty=self.difficulty)
+            # TODO: We want a new thread to do that, but we need to be careful of new transactions arriving
+            # threading.Thread(target=last_block.get_nonce, args=[self.difficulty]).start()
+
         return
 
     def validate_chain(self):

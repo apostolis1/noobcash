@@ -152,7 +152,7 @@ def create_block_endpoint():
     if not b.validate_block(difficulty=blockchain.difficulty):
         print("Block is not valid")
         return "Failed", 400
-    if threading.
+    # TODO: Check if mining thread is alive, if so kill it
     # TODO: Make sure utxos get updated, maybe call generate_utxos_from_chain ?
     cache.set("node", node)
     return "Success", 200
