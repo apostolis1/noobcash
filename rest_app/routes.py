@@ -55,10 +55,11 @@ def register_node():
             utxos = node.utxos_dict
             t = create_transaction(my_wallet, receiving_node["public_key"], 100, utxos)
             t.sign_transaction(my_wallet.private_key)
+            node.utxos_dict = utxos
+            cache.set("node", node)
             threading.Thread(target=node.broadcast_transaction, args=[t]).start()
-    return jsonify({
-            f"id_{new_node_id}": f"{ip_addr}:{port}"
-        }), 200
+            time.sleep(5)
+    return jsonify({f"id_{new_node_id}": f"{ip_addr}:{port}"}), 200
 
 
 def notify_nodes(existing_nodes: dict):
