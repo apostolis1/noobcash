@@ -5,6 +5,7 @@ from noobcash.Transaction import Transaction
 from noobcash.TransactionOutput import TransactionOutput
 from noobcash.utils import create_transaction, transaction_output_from_dict, transaction_from_dict
 import requests
+import time
 
 
 class Node:
@@ -19,6 +20,11 @@ class Node:
         # Send it to the corresponding api endpoint for each node in the ring
         transaction_dict = transaction.to_dict()
         for node in self.ring.values():
-            url = f"http://{node['url']}/transactions/create"
-            requests.post(url, json=transaction_dict)
+            for _ in range(5):
+                try:
+                    url = f"http://{node['url']}/transactions/create"
+                    requests.post(url, json=transaction_dict)
+                    break
+                except Exception as e:
+                    time.sleep(2)
         return
