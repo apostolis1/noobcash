@@ -24,8 +24,9 @@ def create_app(port, is_first=False):
         print("Starting...")
         nodes = current_app.config["NUMBER_OF_NODES"]
         capacity = current_app.config["CAPACITY"]
+        difficulty = current_app.config["DIFFICULTY"]
         if is_first:
-            blockchain = Blockchain(nodes, capacity=capacity)
+            blockchain = Blockchain(nodes, capacity=capacity, difficulty=difficulty)
             node = Node()
             blockchain.GenesisBlock(node.wallet.public_key)
             node.blockchain = blockchain
@@ -56,6 +57,9 @@ def create_app(port, is_first=False):
             blockchain_url = f"{master_url}/blockchain"
             blockchain_dict = requests.get(url=blockchain_url).json()
             blockchain = blockchain_from_dict(blockchain_dict)
+            if not blockchain.validate_chain():
+                raise Exception("Blockchain is not valid")
+            print("Blockchain received is valid")
             node.blockchain = blockchain
             utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
             node.utxos_dict = utxos_dict

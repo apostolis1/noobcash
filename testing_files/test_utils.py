@@ -99,7 +99,7 @@ def test_blockchain_to_dict():
     block = Block(0, previous_hash, list_of_transactions=[transaction], capacity=5)
     nodes = randint(1, 15)
     chain = [block]
-    blockchain = Blockchain(nodes, chain)
+    blockchain = Blockchain(nodes, chain, difficulty=3)
     blockchain_dict = blockchain.to_dict()
     blockchain_2 = blockchain_from_dict(blockchain_dict)
     assert blockchain == blockchain_2
@@ -109,7 +109,7 @@ def test_blockchain_to_dict():
 def test_utxos_from_genesis_blockchain():
     w1 = Wallet()
     nodes = randint(5, 15)
-    blockchain = Blockchain(nodes)
+    blockchain = Blockchain(nodes, difficulty=3)
     blockchain.GenesisBlock(w1.address)
     utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
     print(utxos_dict)

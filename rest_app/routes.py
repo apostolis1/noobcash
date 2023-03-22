@@ -1,7 +1,7 @@
 import json
 import threading
 import time
-
+from copy import deepcopy
 import requests
 from flask import Flask, jsonify, session, current_app, request
 from flask import Blueprint
@@ -47,14 +47,7 @@ def register_node():
     }
     # Create the transaction to transfer 100 nbc to new node
     # blockchain = cache.get("blockchain")
-    my_wallet: Wallet = node.wallet
-    utxos = node.utxos_dict
-    t = create_transaction(my_wallet, public_key, 100, utxos)
-    t.sign_transaction(my_wallet.private_key)
-    t_dict = t.to_dict()
-    with open('convert.json', 'w+') as convert_file:
-        convert_file.write(json.dumps(t_dict))
-    threading.Thread(target=node.broadcast_transaction, args=[t]).start()
+
 
     print(existing_nodes)
     print(f"Assigned node id {new_node_id} to ...")
@@ -63,6 +56,15 @@ def register_node():
         print("All nodes are here, sending information to them")
         # Create new thread to notify the nodes of the network info
         threading.Thread(target=notify_nodes, args=[existing_nodes]).start()
+
+        for receiving_node in existing_nodes.values():
+            my_wallet: Wallet = node.wallet
+            if receiving_node["public_key"] == my_wallet.public_key:
+                continue
+            utxos = node.utxos_dict
+            t = create_transaction(my_wallet, receiving_node["public_key"], 100, utxos)
+            t.sign_transaction(my_wallet.private_key)
+            threading.Thread(target=node.broadcast_transaction, args=[t]).start()
     return jsonify({
             f"id_{new_node_id}": f"{ip_addr}:{port}"
         }), 200
@@ -70,6 +72,7 @@ def register_node():
 
 def notify_nodes(existing_nodes: dict):
     # Notifies all the nodes that are already registered
+    time.sleep(2)
     for node in existing_nodes.values():
         ip_addr = node['url']
         url = f"http://{ip_addr}/nodes/info"
@@ -106,14 +109,18 @@ def all_nodes_info():
     node: Node = cache.get("node")
     node_info = node.ring
     print(node_info)
-    return node_info, 200
+    return jsonify(node_info), 200
 
 
 @route_blueprint.route(rule="/blockchain")
 def get_blockchain():
     node: Node = cache.get("node")
-    blockchain = node.blockchain
-    return blockchain.to_dict(), 200
+    if not node.blockchain.getLastBlock().is_full() and not node.blockchain.getLastBlock().previousHash == "1":
+        blockchain_to_send: Blockchain = deepcopy(node.blockchain)
+        blockchain_to_send.chain = blockchain_to_send.chain[:-1]
+    else:
+        blockchain_to_send = node.blockchain
+    return jsonify(blockchain_to_send.to_dict()), 200
 
 
 @route_blueprint.route(rule="/transactions/create", methods=['POST'])
@@ -144,4 +151,4 @@ def get_utxos_dict():
     res = {}
     for k in utxos_dict.keys():
         res[k] = [i.to_dict() for i in utxos_dict[k]]
-    return res, 200
+    return jsonify(res), 200

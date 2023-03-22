@@ -93,7 +93,8 @@ def blockchain_from_dict(blockchain_dict: dict) -> Blockchain:
     nodes = blockchain_dict["nodes"]
     chain = [block_from_dict(i) for i in blockchain_dict["chain"]]
     capacity = blockchain_dict["capacity"]
-    blockchain = Blockchain(nodes, chain, capacity)
+    difficulty = blockchain_dict["difficulty"]
+    blockchain = Blockchain(nodes, chain, capacity, difficulty)
     return blockchain
 
 

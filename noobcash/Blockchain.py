@@ -5,12 +5,13 @@ from noobcash.TransactionOutput import TransactionOutput
 
 
 class Blockchain:
-    def __init__(self, nodes, chain=None, capacity=None) -> None:
+    def __init__(self, nodes, chain=None, capacity=None, difficulty=None) -> None:
         if chain is None:
             chain = []
         self.chain: list = chain
         self.nodes = nodes
         self.capacity = capacity
+        self.difficulty = difficulty
 
     def GenesisBlock(self, bootstrap_address):
         genesis = Block(index=0, previous_hash='1', nonce=0, capacity=self.capacity)
@@ -38,11 +39,14 @@ class Blockchain:
             new_block.add_transaction(t)
         else:
             last_block.add_transaction(t)
+        last_block = self.getLastBlock()
+        if last_block.is_full():
+            last_block.get_nonce(difficulty=self.difficulty)
         return
 
     def validate_chain(self):
         for idx, block in enumerate(self.chain[1:]):
-            if not (block.validate_block() and self.chain[idx-1].current_hash == block.previousHash):
+            if not (block.validate_block(difficulty=self.difficulty) and self.chain[idx].current_hash == block.previousHash):
                 return False
         return True
 
@@ -52,7 +56,8 @@ class Blockchain:
         res = {
             "chain": chain_list,
             "nodes": self.nodes,
-            "capacity": self.capacity
+            "capacity": self.capacity,
+            "difficulty": self.difficulty
         }
         return res
 
