@@ -37,9 +37,12 @@ class Block:
 	
 	def get_nonce(self, difficulty):
 		# try random values until block is valid
-		nonce_attempt = 0
+		# to compute nonce two possible alternatives
+		# 1) start from random number and +1
+		# 2) start from 0 and for every iteration test a random number 
+		nonce_attempt = random.random()
 		while not self.my_hash(nonce_attempt).startswith('0' * difficulty):
-			nonce_attempt = random.random()
+			nonce_attempt += 1
 		self.nonce = nonce_attempt
 		self.current_hash = self.my_hash(self.nonce)
 		return
