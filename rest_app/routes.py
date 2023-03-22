@@ -80,10 +80,12 @@ def notify_nodes(existing_nodes: dict):
         res = requests.get(url=url, json=data)
     return
 
+
 def send_transaction(transaction_dict):
     time.sleep(1)
     requests.post("http://127.0.0.1:5000/transactions/create", json=transaction_dict)
     requests.post("http://127.0.0.1:5001/transactions/create", json=transaction_dict)
+
 
 @route_blueprint.route(rule="/nodes/info")
 def get_nodes_info():
@@ -116,7 +118,7 @@ def get_blockchain():
 
 @route_blueprint.route(rule="/transactions/create", methods=['POST'])
 def create_transaction_endpoint():
-    # Endpoint where each node is listening for new transactions to be broadcasted
+    # Endpoint where each node is listening for new transactions to be broadcast
     node: Node = cache.get("node")
     transaction_dict = request.json
     # print(transaction_dict)
@@ -124,17 +126,21 @@ def create_transaction_endpoint():
     t = transaction_from_dict(transaction_dict)
     t.verify()
     blockchain = node.blockchain
-    last_block: Block = blockchain.getLastBlock()
-    last_block.add_transaction(t)
+    # Add the new transaction to a correct block
+    blockchain.add_transaction(t)
+    # last_block: Block = blockchain.getLastBlock()
+    # last_block.add_transaction(t)
     utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
     node.blockchain = blockchain
     node.utxos_dict = utxos_dict
     cache.set("node", node)
     return "Success", 200
 
+
 @route_blueprint.route(rule="/utxos/get")
 def get_utxos_dict():
-    utxos_dict = cache.get("utxos")
+    node: Node = cache.get("node")
+    utxos_dict = node.utxos_dict
     res = {}
     for k in utxos_dict.keys():
         res[k] = [i.to_dict() for i in utxos_dict[k]]

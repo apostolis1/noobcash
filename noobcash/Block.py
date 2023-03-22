@@ -4,7 +4,7 @@ import random
 
 
 class Block:
-	def __init__(self, index=0, previous_hash='', nonce=0, current_hash=None, list_of_transactions=None, timestamp=None):
+	def __init__(self, index=0, previous_hash='', nonce=0, current_hash=None, list_of_transactions=None, timestamp=None, capacity=None):
 		if list_of_transactions is None:
 			list_of_transactions = []
 		self.index = index
@@ -16,11 +16,11 @@ class Block:
 		self.nonce = nonce
 		self.current_hash = current_hash
 		self.list_of_transactions = list_of_transactions
-		# self.capacity = None ##pos mporo na paro tin parametro capacity apto config.py?
+		self.capacity = capacity  # pos mporo na paro tin parametro capacity apto config.py?
 
-	def is_full(self, capacity):
+	def is_full(self):
 		# check if block has reached max capacity of transactions
-		return len(self.list_of_transactions) == capacity
+		return len(self.list_of_transactions) == self.capacity
 	
 	def add_transaction(self, transaction):
 		# add a transaction to the block
@@ -58,7 +58,8 @@ class Block:
 			"timestamp": self.timestamp,
 			"nonce": self.nonce,
 			"current_hash": self.current_hash,
-			"transactions": [i.to_dict() for i in self.list_of_transactions]
+			"transactions": [i.to_dict() for i in self.list_of_transactions],
+			"capacity": self.capacity
 		}
 		return res
 

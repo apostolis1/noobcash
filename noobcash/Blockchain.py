@@ -5,14 +5,15 @@ from noobcash.TransactionOutput import TransactionOutput
 
 
 class Blockchain:
-    def __init__(self, nodes, chain=None) -> None:
+    def __init__(self, nodes, chain=None, capacity=None) -> None:
         if chain is None:
             chain = []
         self.chain: list = chain
         self.nodes = nodes
+        self.capacity = capacity
 
     def GenesisBlock(self, bootstrap_address):
-        genesis = Block(index=0, previous_hash='1', nonce = 0)
+        genesis = Block(index=0, previous_hash='1', nonce=0, capacity=self.capacity)
         # TODO: Add transaction_inputs
         genesis_transaction = Transaction(sender_address = '0', recipient_address = bootstrap_address, value = 100*self.nodes, transaction_inputs=[])
         genesis_transaction.transaction_outputs = [TransactionOutput(genesis_transaction.transaction_id, genesis_transaction.receiver_address, genesis_transaction.amount)]
@@ -21,17 +22,27 @@ class Blockchain:
         self.chain.append(genesis)
         return
 
-    def getLastBlock(self):
+    def getLastBlock(self) -> Block:
         return self.chain[len(self.chain) - 1]
 
     def addBlock(self, newBlock : Block):
-        if (newBlock.is_full()):
-            self.chain.append(newBlock)
+        self.chain.append(newBlock)
         return
-    
+
+    def add_transaction(self, t: Transaction) -> None:
+        last_block = self.getLastBlock()
+        # Check if last block is the genesis block
+        if last_block.previousHash == '1' or last_block.is_full():
+            new_block = Block(index=last_block.index+1, previous_hash=last_block.current_hash, capacity=self.capacity)
+            self.addBlock(new_block)
+            new_block.add_transaction(t)
+        else:
+            last_block.add_transaction(t)
+        return
+
     def validate_chain(self):
         for idx, block in enumerate(self.chain[1:]):
-            if (not (block.validate_block() and self.chain[idx-1].current_hash == block.previousHash)):
+            if not (block.validate_block() and self.chain[idx-1].current_hash == block.previousHash):
                 return False
         return True
 
@@ -40,7 +51,8 @@ class Blockchain:
         print(chain_list)
         res = {
             "chain": chain_list,
-            "nodes": self.nodes
+            "nodes": self.nodes,
+            "capacity": self.capacity
         }
         return res
 

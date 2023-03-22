@@ -23,8 +23,9 @@ def create_app(port, is_first=False):
         master_url = "http://127.0.0.1:5000"
         print("Starting...")
         nodes = current_app.config["NUMBER_OF_NODES"]
+        capacity = current_app.config["CAPACITY"]
         if is_first:
-            blockchain = Blockchain(nodes)
+            blockchain = Blockchain(nodes, capacity=capacity)
             node = Node()
             blockchain.GenesisBlock(node.wallet.public_key)
             node.blockchain = blockchain

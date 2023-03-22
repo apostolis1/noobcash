@@ -85,14 +85,15 @@ def block_from_dict(block_dict: dict) -> Block:
     nonce = block_dict["nonce"]
     current_hash = block_dict["current_hash"]
     transactions = [transaction_from_dict(i) for i in block_dict["transactions"]]
-    block = Block(index, previous_hash, nonce, current_hash, transactions, timestamp)
+    block = Block(index, previous_hash, nonce, current_hash, transactions, timestamp, capacity=block_dict["capacity"])
     return block
 
 
 def blockchain_from_dict(blockchain_dict: dict) -> Blockchain:
     nodes = blockchain_dict["nodes"]
     chain = [block_from_dict(i) for i in blockchain_dict["chain"]]
-    blockchain = Blockchain(nodes, chain)
+    capacity = blockchain_dict["capacity"]
+    blockchain = Blockchain(nodes, chain, capacity)
     return blockchain
 
 

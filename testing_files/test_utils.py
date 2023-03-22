@@ -75,7 +75,7 @@ def test_block_to_dict():
     }
     previous_hash = "random_hash"
     transaction = create_transaction(w1, w2.public_key, transfer_amount, dict_of_utxos)
-    block = Block(0, previous_hash, list_of_transactions=[transaction])
+    block = Block(0, previous_hash, list_of_transactions=[transaction], capacity=5)
     block_dict = block.to_dict()
     block_2 = block_from_dict(block_dict)
     assert block == block_2
@@ -96,7 +96,7 @@ def test_blockchain_to_dict():
     }
     previous_hash = "random_hash"
     transaction = create_transaction(w1, w2.public_key, transfer_amount, dict_of_utxos)
-    block = Block(0, previous_hash, list_of_transactions=[transaction])
+    block = Block(0, previous_hash, list_of_transactions=[transaction], capacity=5)
     nodes = randint(1, 15)
     chain = [block]
     blockchain = Blockchain(nodes, chain)
