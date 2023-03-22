@@ -12,15 +12,6 @@ from noobcash.Node import Node
 route_blueprint = Blueprint('route_blueprint', __name__)
 
 
-@route_blueprint.route(rule="/transactions/get")
-def get_transactions():
-    # transactions = blockchain.transactions
-    transactions = cache.get("Transactions")
-    response = {'transactions': transactions}
-    print(transactions)
-    return jsonify(response), 200
-
-
 @route_blueprint.route(rule="/register")
 def register_node():
     # Endpoint where the bootstrap node is waiting for the info from other nodes
@@ -72,7 +63,7 @@ def register_node():
 
 def notify_nodes(existing_nodes: dict):
     # Notifies all the nodes that are already registered
-    time.sleep(2)
+    time.sleep(2)  # TODO remove this sleep, sleep when timeout instead
     for node in existing_nodes.values():
         ip_addr = node['url']
         url = f"http://{ip_addr}/nodes/info"
@@ -82,12 +73,6 @@ def notify_nodes(existing_nodes: dict):
         }
         res = requests.get(url=url, json=data)
     return
-
-
-def send_transaction(transaction_dict):
-    time.sleep(1)
-    requests.post("http://127.0.0.1:5000/transactions/create", json=transaction_dict)
-    requests.post("http://127.0.0.1:5001/transactions/create", json=transaction_dict)
 
 
 @route_blueprint.route(rule="/nodes/info")
