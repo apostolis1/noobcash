@@ -1,3 +1,4 @@
+import json
 import threading
 import time
 
@@ -6,6 +7,7 @@ from flask import Flask, jsonify, session, current_app, request
 from flask import Blueprint
 from rest_app.common import cache
 from noobcash.utils import *
+from noobcash.Node import Node
 
 route_blueprint = Blueprint('route_blueprint', __name__)
 
@@ -28,9 +30,12 @@ def register_node():
     ip_addr = request.args.get('ip')
     port = request.args.get('port')
     public_key = request.args.get('public_key')
+    node: Node = cache.get("node")
+    if node is None:
+        raise Exception("Node is not found")
     print(f"Received registration request from ip {ip_addr} at port {port} with public_key {public_key}")
     # Add node to existing nodes
-    existing_nodes = cache.get("nodes")
+    existing_nodes = node.ring
     if existing_nodes is None:
         existing_nodes = []
         print("Existing nodes is empty")
@@ -45,16 +50,19 @@ def register_node():
         }
     )
     # Create the transaction to transfer 100 nbc to new node
-    blockchain = cache.get("blockchain")
-    my_wallet: Wallet = cache.get("wallet")
-    utxos = cache.get("utxos")
+    # blockchain = cache.get("blockchain")
+    my_wallet: Wallet = node.wallet
+    utxos = node.utxos_dict
     t = create_transaction(my_wallet, public_key, 100, utxos)
     t.sign_transaction(my_wallet.private_key)
     t_dict = t.to_dict()
+    with open('convert.json', 'w+') as convert_file:
+        convert_file.write(json.dumps(t_dict))
     threading.Thread(target=send_transaction, args=[t_dict]).start()
-    cache.set("nodes", existing_nodes)
+
     print(existing_nodes)
     print(f"Assigned node id {new_node_id} to ...")
+    cache.set("node", node)
     if len(existing_nodes) == current_app.config["NUMBER_OF_NODES"]:
         print("All nodes are here, sending information to them")
         # Create new thread to notify the nodes of the network info
@@ -78,6 +86,7 @@ def notify_nodes(existing_nodes):
 
 def send_transaction(transaction_dict):
     time.sleep(1)
+    requests.post("http://127.0.0.1:5000/transactions/create", json=transaction_dict)
     requests.post("http://127.0.0.1:5001/transactions/create", json=transaction_dict)
 
 @route_blueprint.route(rule="/nodes/info")
@@ -98,23 +107,26 @@ def all_nodes_info():
 
 @route_blueprint.route(rule="/blockchain")
 def get_blockchain():
-    blockchain = cache.get("blockchain")
+    node: Node = cache.get("node")
+    blockchain = node.blockchain
     return blockchain.to_dict(), 200
 
 
 @route_blueprint.route(rule="/transactions/create", methods=['POST'])
 def create_transaction_endpoint():
     # Endpoint where each node is listening for new transactions to be broadcasted
+    node: Node = cache.get("node")
     transaction_dict = request.json
-    print(transaction_dict)
+    # print(transaction_dict)
     print("Received transaction")
     t = transaction_from_dict(transaction_dict)
-    blockchain = cache.get("blockchain")
+    blockchain = node.blockchain
     last_block: Block = blockchain.getLastBlock()
     last_block.add_transaction(t)
     utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
-    cache.set("blockchain", blockchain)
-    cache.set("utxos", utxos_dict)
+    node.blockchain = blockchain
+    node.utxos_dict = utxos_dict
+    cache.set("node", node)
     return "Success", 200
 
 @route_blueprint.route(rule="/utxos/get")
