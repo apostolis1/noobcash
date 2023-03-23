@@ -46,34 +46,55 @@ def register_node():
     if len(existing_nodes) == current_app.config["NUMBER_OF_NODES"]:
         print("All nodes are here, sending information to them")
         # Create new thread to notify the nodes of the network info
-        threading.Thread(target=notify_nodes, args=[existing_nodes]).start()
-
-        for receiving_node in existing_nodes.values():
-            my_wallet: Wallet = node.wallet
-            if receiving_node["public_key"] == my_wallet.public_key:
-                continue
-            utxos = node.utxos_dict
-            t = create_transaction(my_wallet, receiving_node["public_key"], 100, utxos)
-            t.sign_transaction(my_wallet.private_key)
-            node.utxos_dict = utxos
-            cache.set("node", node)
-            threading.Thread(target=node.broadcast_transaction, args=[t]).start()
-            # time.sleep(5)
+        threading.Thread(target=all_nodes_here, args=[existing_nodes, node]).start()
     return jsonify({f"id_{new_node_id}": f"{ip_addr}:{port}"}), 200
 
 
-def notify_nodes(existing_nodes: dict):
-    # Notifies all the nodes that are already registered
-    time.sleep(2)  # TODO remove this sleep, sleep when timeout instead
-    for node in existing_nodes.values():
-        ip_addr = node['url']
+def all_nodes_here(existing_nodes: dict, node: Node):
+    time.sleep(2)
+    if not node.blockchain.getLastBlock().validate_block(
+            node.blockchain.difficulty) and not node.blockchain.getLastBlock().previousHash == "1":
+        blockchain_to_send: Blockchain = deepcopy(node.blockchain)
+        blockchain_to_send.chain = blockchain_to_send.chain[:-1]
+    else:
+        blockchain_to_send = node.blockchain
+    for n in existing_nodes.values():
+        ip_addr = n['url']
         url = f"http://{ip_addr}/nodes/info"
         print(url)
         data = {
             "nodes": existing_nodes
         }
-        res = requests.get(url=url, json=data)
+        requests.get(url=url, json=data)
+        url = f"http://{ip_addr}/blockchain/get"
+        requests.post(url=url, json=blockchain_to_send.to_dict())
+
+    # Create transactions for each node
+    for receiving_node in existing_nodes.values():
+        my_wallet: Wallet = node.wallet
+        if receiving_node["public_key"] == my_wallet.public_key:
+            continue
+        utxos = node.utxos_dict
+        t = create_transaction(my_wallet, receiving_node["public_key"], 100, utxos)
+        t.sign_transaction(my_wallet.private_key)
+        node.utxos_dict = utxos
+        cache.set("node", node)
+        threading.Thread(target=node.broadcast_transaction, args=[t]).start()
     return
+
+# def notify_nodes(existing_nodes: dict):
+#     # Notifies all the nodes that are already registered
+#     time.sleep(2)  # TODO remove this sleep, sleep when timeout instead
+#     for node in existing_nodes.values():
+#         ip_addr = node['url']
+#         url = f"http://{ip_addr}/nodes/info"
+#         print(url)
+#         data = {
+#             "nodes": existing_nodes
+#         }
+#         res = requests.get(url=url, json=data)
+#         requests.
+#     return
 
 
 @route_blueprint.route(rule="/nodes/info")
@@ -108,6 +129,17 @@ def get_blockchain():
     else:
         blockchain_to_send = node.blockchain
     return jsonify(blockchain_to_send.to_dict()), 200
+
+
+@route_blueprint.route(rule="/blockchain/get", methods=["POST"])
+def receive_blockchain():
+    node: Node = cache.get("node")
+    blockchain_dict = request.json
+    blockchain = blockchain_from_dict(blockchain_dict)
+    # We need to send only valid blocks that are added to the chain, not the ones we are working on
+    node.blockchain = blockchain
+    cache.set("node", node)
+    return "Success", 200
 
 
 @route_blueprint.route(rule="/transactions/create", methods=['POST'])

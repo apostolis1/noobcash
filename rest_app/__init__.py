@@ -52,17 +52,18 @@ def create_app(port, is_first=False):
                 "public_key": node.wallet.public_key
             }
             register_url = f"{master_url}/register"
-            res = requests.get(url=register_url, params=data)
-            # Get the current blockchain from bootstrap node
-            blockchain_url = f"{master_url}/blockchain"
-            blockchain_dict = requests.get(url=blockchain_url).json()
-            blockchain = blockchain_from_dict(blockchain_dict)
-            if not blockchain.validate_chain():
-                raise Exception("Blockchain is not valid")
-            print("Blockchain received is valid")
-            node.blockchain = blockchain
-            utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
-            node.utxos_dict = utxos_dict
             cache.set("node", node)
+            res = requests.get(url=register_url, params=data)
+            # # Get the current blockchain from bootstrap node
+            # blockchain_url = f"{master_url}/blockchain"
+            # blockchain_dict = requests.get(url=blockchain_url).json()
+            # blockchain = blockchain_from_dict(blockchain_dict)
+            # if not blockchain.validate_chain():
+            #     raise Exception("Blockchain is not valid")
+            # print("Blockchain received is valid")
+            # node.blockchain = blockchain
+            # utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
+            # node.utxos_dict = utxos_dict
+
             # print(res.json())
         return app
