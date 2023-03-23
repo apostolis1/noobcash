@@ -84,6 +84,8 @@ def block_from_dict(block_dict: dict) -> Block:
     timestamp = block_dict["timestamp"]
     nonce = block_dict["nonce"]
     current_hash = block_dict["current_hash"]
+    if current_hash is None:
+        raise Exception("current_hash is None")
     transactions = [transaction_from_dict(i) for i in block_dict["transactions"]]
     block = Block(index, previous_hash, nonce, current_hash, transactions, timestamp, capacity=block_dict["capacity"])
     return block

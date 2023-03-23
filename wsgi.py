@@ -12,4 +12,4 @@ if __name__ == "__main__":
     else:
         is_first = False
     app = create_app(port, is_first)
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, threaded=False)

@@ -31,7 +31,10 @@ class Block:
 		# calculate self.hash
 		transaction_hash_list = [i.calculate_hash().hexdigest() for i in self.list_of_transactions]
 		transaction_hash = ''.join(transaction_hash_list)
-		value_to_hash = self.previousHash + transaction_hash + str(nonce)
+		try:
+			value_to_hash = self.previousHash + transaction_hash + str(nonce)
+		except Exception as e:
+			print("Here")
 		hash_object = SHA256.new(data=value_to_hash.encode())
 		return hash_object.hexdigest()
 	
@@ -41,8 +44,12 @@ class Block:
 		# 1) start from random number and +1
 		# 2) start from 0 and for every iteration test a random number 
 		nonce_attempt = random.random()
-		while not self.my_hash(nonce_attempt).startswith('0' * difficulty) or not event.is_set():
-				nonce_attempt += 1
+		while not self.my_hash(nonce_attempt).startswith('0' * difficulty):
+			if event.is_set():
+				print("Someone stopped me, breaking...")
+				return
+			nonce_attempt += 1
+
 		self.nonce = nonce_attempt
 		self.current_hash = self.my_hash(self.nonce)
 		return

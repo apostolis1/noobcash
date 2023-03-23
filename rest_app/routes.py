@@ -141,15 +141,22 @@ def receive_blockchain():
     cache.set("node", node)
     return "Success", 200
 
+
 @route_blueprint.route(rule="/block/get", methods=["POST"])
 def receive_block():
     print("receive_block method has been called properly")
     node: Node = cache.get("node")
-    block_dict = request.json 
+    block_dict = request.json
     block = block_from_dict(block_dict)
+    if block.current_hash is None:
+        raise Exception("None current hash received")
     node.add_block_to_blockchain(block)
+    print(f"Received Block with current hash: {block.current_hash}")
+    print(f"Received Last_Block with current hash: {node.blockchain.getLastBlock().current_hash}")
     cache.set("node", node)
-    return "Received block and added it to Blockchain successfully", 200
+    print(node.blockchain.chain)
+    return "Success", 200
+
 
 @route_blueprint.route(rule="/transactions/create", methods=['POST'])
 def create_transaction_endpoint():
@@ -182,20 +189,21 @@ def get_utxos_dict():
     return jsonify(res), 200
 
 
-@route_blueprint.route(rule="/blocks/create", methods=['POST'])
-def create_block_endpoint():
-    # TODO: Complete this
-    # Endpoint where each node is listening for new blocks to be broadcast
-    # Should check if we are mining already and stop in that case
-    node: Node = cache.get("node")
-    block_dict = request.json
-    print("Received block")
-    b = block_from_dict(block_dict)
-    blockchain = node.blockchain
-    if not b.validate_block(difficulty=blockchain.difficulty):
-        print("Block is not valid")
-        return "Failed", 400
-    # TODO: Check if mining thread is alive, if so kill it
-    # TODO: Make sure utxos get updated, maybe call generate_utxos_from_chain ?
-    cache.set("node", node)
-    return "Success", 200
+# @route_blueprint.route(rule="/blocks/create", methods=['POST'])
+# def create_block_endpoint():
+#     # TODO: Complete this
+#     # Endpoint where each node is listening for new blocks to be broadcast
+#     # Should check if we are mining already and stop in that case
+#     node: Node = cache.get("node")
+#     block_dict = request.json
+#     print("Received block")
+#     b = block_from_dict(block_dict)
+#     blockchain = node.blockchain
+#     if not b.validate_block(difficulty=blockchain.difficulty):
+#         print("Block is not valid")
+#         return "Failed", 400
+#     # TODO: Check if mining thread is alive, if so kill it
+#     # TODO: Make sure utxos get updated, maybe call generate_utxos_from_chain ?
+#
+#     cache.set("node", node)
+#     return "Success", 200

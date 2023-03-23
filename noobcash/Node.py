@@ -7,6 +7,7 @@ from noobcash.utils import create_transaction, transaction_output_from_dict, tra
 import requests
 import time
 from threading import Thread, Event
+from noobcash.myEvent import SerializableEvent
 
 
 class Node:
@@ -17,7 +18,7 @@ class Node:
         self.utxos_dict = {}
         self.mining = False
         self.transaction_pool = []
-        self.mining_thread = None
+        # self.mining_thread = None
         self.event = None
 
     def broadcast_transaction(self, transaction: Transaction):
@@ -28,9 +29,11 @@ class Node:
             for _ in range(5):
                 try:
                     url = f"http://{node['url']}/transactions/create"
-                    requests.post(url, json=transaction_dict)
+                    res = requests.post(url, json=transaction_dict)
                     break
                 except Exception as e:
+                    print("Got exception")
+                    print(e)
                     time.sleep(2)
         return
 
@@ -48,26 +51,33 @@ class Node:
                     time.sleep(2)
         return
     
-    
     def add_block_to_blockchain(self, block: Block):
-        if block.validate_block() and self.blockchain.getLastBlock.current_hash == block.previousHash:
-            if self.mining == True:           
+        if block.previousHash != self.blockchain.getLastBlock().current_hash:
+            return
+        # if block.validate_block(self.blockchain.difficulty) and self.blockchain.getLastBlock().current_hash == block.previousHash:
+        if block.validate_block(self.blockchain.difficulty):
+            print("Received a valid block, will check if I am mining already")
+            if self.mining:
                 self.mining = False
+                print("I am mining, will stop...")
                 # TODO: stop thread that mines since I received another already mined block
                 self.event.set()
-            self.blockchain.addBlock(block)
+            if self.blockchain.getLastBlock().current_hash is None:
+                self.blockchain.chain[len(self.blockchain.chain) - 1] = block
+            # self.blockchain.addBlock(block)
         return
     
-    def mine_block(self):
+    def mine_block(self, ):
         self.mining = True
-        self.event = Event()
-        self.mining_thread = Thread(target=self.blockchain.getLastBlock().get_nonce, args=[self.blockchain.difficulty, self.event])
-        self.mining_thread.start()
+        self.event = SerializableEvent()
+        self.blockchain.getLastBlock().get_nonce(self.blockchain.difficulty, self.event)
+        print(f"Finished mining and about to broadcast, hash is {self.blockchain.getLastBlock().current_hash}")
+        self.broadcast_block(self.blockchain.getLastBlock())
         return
 
-    def add_transaction (self, t : Transaction):
+    def add_transaction(self, t: Transaction):
         if self.blockchain.add_transaction(t):
-            #transaction added filled the block, so I start mining
-            self.mine_block()
-            self.broadcast_block(self.blockchain.getLastBlock())
-        return  
+            # transaction added filled the block, so I start mining
+            mining_thread = Thread(target=self.mine_block)
+            mining_thread.start()
+        return
