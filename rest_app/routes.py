@@ -1,66 +1,73 @@
+import json
 import threading
-
+import time
+from copy import deepcopy
 import requests
 from flask import Flask, jsonify, session, current_app, request
 from flask import Blueprint
 from rest_app.common import cache
+from noobcash.utils import *
+from noobcash.Node import Node
 
 route_blueprint = Blueprint('route_blueprint', __name__)
 
 
-@route_blueprint.route(rule="/transactions/get")
-def get_transactions():
-    # transactions = blockchain.transactions
-    transactions = cache.get("Transactions")
-    response = {'transactions': transactions}
-    print(transactions)
-    return jsonify(response), 200
-
-
 @route_blueprint.route(rule="/register")
 def register_node():
+    # Endpoint where the bootstrap node is waiting for the info from other nodes
+    # Is responsible for everything that should be done when a node is trying to enter the system
+    # meaning sending the blockchain copy, notifying all the nodes about the info of the entire network once
+    # all the nodes have been registered
     ip_addr = request.args.get('ip')
     port = request.args.get('port')
     public_key = request.args.get('public_key')
+    node: Node = cache.get("node")
+    if node is None:
+        raise Exception("Node is not found")
     print(f"Received registration request from ip {ip_addr} at port {port} with public_key {public_key}")
-    existing_nodes = cache.get("nodes")
+    # Add node to existing nodes
+    existing_nodes = node.ring
     if existing_nodes is None:
-        existing_nodes = []
+        existing_nodes = {}
         print("Existing nodes is empty")
+    # Assign id to node
     new_node_id = len(existing_nodes)
-    existing_nodes.append(
-        {
-            f"id_{new_node_id}":  {
-                "url": f"{ip_addr}:{port}",
-                "public_key": public_key
-            }
-        }
-    )
+    existing_nodes[f"id_{new_node_id}"] = {
+        "url": f"{ip_addr}:{port}",
+        "public_key": public_key
+    }
+    # Create the transaction to transfer 100 nbc to new node
+    # blockchain = cache.get("blockchain")
 
-    cache.set("nodes", existing_nodes)
-    print(existing_nodes)
+
+    # print(existing_nodes)
     print(f"Assigned node id {new_node_id} to ...")
+    cache.set("node", node)
     if len(existing_nodes) == current_app.config["NUMBER_OF_NODES"]:
         print("All nodes are here, sending information to them")
-        # for node in existing_nodes:
-        #     url = f"http://{list(node.values())[0]}/nodes/info"
-        #     url = "http://127.0.0.1:5001/nodes/info"
-        #     print(url)
-        #     data = {
-        #         "nodes": existing_nodes
-        #     }
-        #     res = requests.get(url=url)
+        # Create new thread to notify the nodes of the network info
         threading.Thread(target=notify_nodes, args=[existing_nodes]).start()
-    return jsonify({
-            f"id_{new_node_id}": f"{ip_addr}:{port}"
-        }), 200
+
+        for receiving_node in existing_nodes.values():
+            my_wallet: Wallet = node.wallet
+            if receiving_node["public_key"] == my_wallet.public_key:
+                continue
+            utxos = node.utxos_dict
+            t = create_transaction(my_wallet, receiving_node["public_key"], 100, utxos)
+            t.sign_transaction(my_wallet.private_key)
+            node.utxos_dict = utxos
+            cache.set("node", node)
+            threading.Thread(target=node.broadcast_transaction, args=[t]).start()
+            # time.sleep(5)
+    return jsonify({f"id_{new_node_id}": f"{ip_addr}:{port}"}), 200
 
 
-def notify_nodes(existing_nodes):
-    for node in existing_nodes:
-        ip_addr = node[list(node.keys())[0]]['url']
+def notify_nodes(existing_nodes: dict):
+    # Notifies all the nodes that are already registered
+    time.sleep(2)  # TODO remove this sleep, sleep when timeout instead
+    for node in existing_nodes.values():
+        ip_addr = node['url']
         url = f"http://{ip_addr}/nodes/info"
-        # url = "http://127.0.0.1:5001/nodes/info"
         print(url)
         data = {
             "nodes": existing_nodes
@@ -73,12 +80,81 @@ def notify_nodes(existing_nodes):
 def get_nodes_info():
     node_info = request.json
     print(node_info)
-    cache.set("nodes", node_info)
+    node: Node = cache.get("node")
+    if node is None:
+        raise Exception("Node not found")
+    # TODO Make sure that the node is created and set in cache
+    node.ring = node_info
+    cache.set("node", node)
     return "Success", 200
 
 
 @route_blueprint.route(rule="/nodes/all")
 def all_nodes_info():
-    node_info = cache.get("nodes")
+    # Endpoint to return information the node has about all the other nodes in the network
+    node: Node = cache.get("node")
+    node_info = node.ring
     print(node_info)
-    return node_info, 200
+    return jsonify(node_info), 200
+
+
+@route_blueprint.route(rule="/blockchain")
+def get_blockchain():
+    node: Node = cache.get("node")
+    # We need to send only valid blocks that are added to the chain, not the ones we are working on
+    if not node.blockchain.getLastBlock().validate_block(node.blockchain.difficulty) and not node.blockchain.getLastBlock().previousHash == "1":
+        blockchain_to_send: Blockchain = deepcopy(node.blockchain)
+        blockchain_to_send.chain = blockchain_to_send.chain[:-1]
+    else:
+        blockchain_to_send = node.blockchain
+    return jsonify(blockchain_to_send.to_dict()), 200
+
+
+@route_blueprint.route(rule="/transactions/create", methods=['POST'])
+def create_transaction_endpoint():
+    # Endpoint where each node is listening for new transactions to be broadcast
+    node: Node = cache.get("node")
+    transaction_dict = request.json
+    # print(transaction_dict)
+    print("Received transaction")
+    t = transaction_from_dict(transaction_dict)
+    t.verify()
+    blockchain = node.blockchain
+    # Add the new transaction to a correct block
+    blockchain.add_transaction(t)
+    # last_block: Block = blockchain.getLastBlock()
+    # last_block.add_transaction(t)
+    utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
+    node.blockchain = blockchain
+    node.utxos_dict = utxos_dict
+    cache.set("node", node)
+    return "Success", 200
+
+
+@route_blueprint.route(rule="/utxos/get")
+def get_utxos_dict():
+    node: Node = cache.get("node")
+    utxos_dict = node.utxos_dict
+    res = {}
+    for k in utxos_dict.keys():
+        res[k] = [i.to_dict() for i in utxos_dict[k]]
+    return jsonify(res), 200
+
+
+@route_blueprint.route(rule="/blocks/create", methods=['POST'])
+def create_block_endpoint():
+    # TODO: Complete this
+    # Endpoint where each node is listening for new blocks to be broadcast
+    # Should check if we are mining already and stop in that case
+    node: Node = cache.get("node")
+    block_dict = request.json
+    print("Received block")
+    b = block_from_dict(block_dict)
+    blockchain = node.blockchain
+    if not b.validate_block(difficulty=blockchain.difficulty):
+        print("Block is not valid")
+        return "Failed", 400
+    # TODO: Check if mining thread is alive, if so kill it
+    # TODO: Make sure utxos get updated, maybe call generate_utxos_from_chain ?
+    cache.set("node", node)
+    return "Success", 200

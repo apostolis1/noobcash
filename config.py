@@ -1,5 +1,4 @@
-
-
 class Config(object):
-    NUMBER_OF_NODES = 2
-    CAPACITY = 5
+    NUMBER_OF_NODES = 5
+    CAPACITY = 2
+    DIFFICULTY = 2

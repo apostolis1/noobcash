@@ -1,5 +1,5 @@
-from Wallet import Wallet
-from Transaction import Transaction
+from noobcash.Wallet import Wallet
+from noobcash.Transaction import Transaction
 
 receiver_wallet = Wallet()
 
