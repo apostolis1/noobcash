@@ -50,6 +50,8 @@ class Block:
 	def validate_block(self, difficulty):
 		# TODO: Maybe change this so it accepts a previous_block so it can check previous_block.current_hash == self.previousHash
 		# validate the block of transactions
+		if self.current_hash is None:
+			return False
 		return self.current_hash.startswith('0' * difficulty)
 
 	def to_dict(self):

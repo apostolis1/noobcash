@@ -40,7 +40,7 @@ def register_node():
     # blockchain = cache.get("blockchain")
 
 
-    print(existing_nodes)
+    # print(existing_nodes)
     print(f"Assigned node id {new_node_id} to ...")
     cache.set("node", node)
     if len(existing_nodes) == current_app.config["NUMBER_OF_NODES"]:
@@ -58,7 +58,7 @@ def register_node():
             node.utxos_dict = utxos
             cache.set("node", node)
             threading.Thread(target=node.broadcast_transaction, args=[t]).start()
-            time.sleep(5)
+            # time.sleep(5)
     return jsonify({f"id_{new_node_id}": f"{ip_addr}:{port}"}), 200
 
 
@@ -101,7 +101,8 @@ def all_nodes_info():
 @route_blueprint.route(rule="/blockchain")
 def get_blockchain():
     node: Node = cache.get("node")
-    if not node.blockchain.getLastBlock().is_full() and not node.blockchain.getLastBlock().previousHash == "1":
+    # We need to send only valid blocks that are added to the chain, not the ones we are working on
+    if not node.blockchain.getLastBlock().validate_block(node.blockchain.difficulty) and not node.blockchain.getLastBlock().previousHash == "1":
         blockchain_to_send: Blockchain = deepcopy(node.blockchain)
         blockchain_to_send.chain = blockchain_to_send.chain[:-1]
     else:
