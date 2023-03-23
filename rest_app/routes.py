@@ -141,6 +141,15 @@ def receive_blockchain():
     cache.set("node", node)
     return "Success", 200
 
+@route_blueprint.route(rule="/block/get", methods=["POST"])
+def receive_block():
+    print("receive_block method has been called properly")
+    node: Node = cache.get("node")
+    block_dict = request.json 
+    block = block_from_dict(block_dict)
+    node.add_block_to_blockchain(block)
+    cache.set("node", node)
+    return "Received block and added it to Blockchain successfully", 200
 
 @route_blueprint.route(rule="/transactions/create", methods=['POST'])
 def create_transaction_endpoint():
@@ -153,7 +162,7 @@ def create_transaction_endpoint():
     t.verify()
     blockchain = node.blockchain
     # Add the new transaction to a correct block
-    blockchain.add_transaction(t)
+    node.add_transaction(t)
     # last_block: Block = blockchain.getLastBlock()
     # last_block.add_transaction(t)
     utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())

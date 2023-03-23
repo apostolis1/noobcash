@@ -1,7 +1,7 @@
 from time import time
 from Crypto.Hash import SHA256
 import random
-
+from threading import Event
 
 class Block:
 	def __init__(self, index=0, previous_hash='', nonce=0, current_hash=None, list_of_transactions=None, timestamp=None, capacity=None):
@@ -35,14 +35,14 @@ class Block:
 		hash_object = SHA256.new(data=value_to_hash.encode())
 		return hash_object.hexdigest()
 	
-	def get_nonce(self, difficulty):
+	def get_nonce(self, difficulty, event):
 		# try random values until block is valid
 		# to compute nonce two possible alternatives
 		# 1) start from random number and +1
 		# 2) start from 0 and for every iteration test a random number 
 		nonce_attempt = random.random()
-		while not self.my_hash(nonce_attempt).startswith('0' * difficulty):
-			nonce_attempt += 1
+		while not self.my_hash(nonce_attempt).startswith('0' * difficulty) or not event.is_set():
+				nonce_attempt += 1
 		self.nonce = nonce_attempt
 		self.current_hash = self.my_hash(self.nonce)
 		return

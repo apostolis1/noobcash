@@ -32,7 +32,7 @@ class Blockchain:
         self.chain.append(newBlock)
         return
 
-    def add_transaction(self, t: Transaction) -> None:
+    def add_transaction(self, t: Transaction) -> bool:
         last_block = self.getLastBlock()
         # Check if last block is the genesis block
         if last_block.previousHash == '1' or last_block.is_full():
@@ -43,11 +43,12 @@ class Blockchain:
             last_block.add_transaction(t)
         last_block = self.getLastBlock()
         if last_block.is_full():
-            last_block.get_nonce(difficulty=self.difficulty)
+            #last_block.get_nonce(difficulty=self.difficulty)
+            return True
             # TODO: We want a new thread to do that, but we need to be careful of new transactions arriving
             # threading.Thread(target=last_block.get_nonce, args=[self.difficulty]).start()
 
-        return
+        return False
 
     def validate_chain(self):
         for idx, block in enumerate(self.chain[1:]):
