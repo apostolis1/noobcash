@@ -141,6 +141,7 @@ def receive_block():
     print(f"Received Block with current hash: {block.current_hash}")
     if block.current_hash is None:
         raise Exception("None current hash received")
+    print(f"Mining value: {node.mining}, mining location: {hex(id(node.mining))}")
     node.add_block_to_blockchain(block)
 
     # print(f"Received Last_Block with current hash: {node.blockchain.getLastBlock().current_hash}")
