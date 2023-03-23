@@ -59,7 +59,7 @@ class Transaction:
         rsa_key = RSA.importKey(private_key)
         signature = pkcs1_15.new(rsa_key).sign(transaction_hash)
         self.signature = signature
-        print("Changed signature...")
+        # print("Changed signature...")
         return
 
     def verify(self):

@@ -52,12 +52,7 @@ def register_node():
 
 def all_nodes_here(existing_nodes: dict, node: Node):
     time.sleep(2)
-    if not node.blockchain.getLastBlock().validate_block(
-            node.blockchain.difficulty) and not node.blockchain.getLastBlock().previousHash == "1":
-        blockchain_to_send: Blockchain = deepcopy(node.blockchain)
-        blockchain_to_send.chain = blockchain_to_send.chain[:-1]
-    else:
-        blockchain_to_send = node.blockchain
+    blockchain_to_send = node.blockchain
     for n in existing_nodes.values():
         ip_addr = n['url']
         url = f"http://{ip_addr}/nodes/info"
@@ -99,8 +94,8 @@ def all_nodes_here(existing_nodes: dict, node: Node):
 
 @route_blueprint.route(rule="/nodes/info")
 def get_nodes_info():
-    node_info = request.json
-    print(node_info)
+    node_info = request.json["nodes"]
+    # print(node_info)
     node: Node = cache.get("node")
     if node is None:
         raise Exception("Node not found")
@@ -115,20 +110,14 @@ def all_nodes_info():
     # Endpoint to return information the node has about all the other nodes in the network
     node: Node = cache.get("node")
     node_info = node.ring
-    print(node_info)
+    # print(node_info)
     return jsonify(node_info), 200
 
 
 @route_blueprint.route(rule="/blockchain")
 def get_blockchain():
     node: Node = cache.get("node")
-    # We need to send only valid blocks that are added to the chain, not the ones we are working on
-    if not node.blockchain.getLastBlock().validate_block(node.blockchain.difficulty) and not node.blockchain.getLastBlock().previousHash == "1":
-        blockchain_to_send: Blockchain = deepcopy(node.blockchain)
-        blockchain_to_send.chain = blockchain_to_send.chain[:-1]
-    else:
-        blockchain_to_send = node.blockchain
-    return jsonify(blockchain_to_send.to_dict()), 200
+    return jsonify(node.blockchain.to_dict()), 200
 
 
 @route_blueprint.route(rule="/blockchain/get", methods=["POST"])
@@ -144,17 +133,19 @@ def receive_blockchain():
 
 @route_blueprint.route(rule="/block/get", methods=["POST"])
 def receive_block():
+    # Endpoint where each node is waiting for blocks to be broadcasted
     print("receive_block method has been called properly")
     node: Node = cache.get("node")
     block_dict = request.json
     block = block_from_dict(block_dict)
+    print(f"Received Block with current hash: {block.current_hash}")
     if block.current_hash is None:
         raise Exception("None current hash received")
     node.add_block_to_blockchain(block)
-    print(f"Received Block with current hash: {block.current_hash}")
-    print(f"Received Last_Block with current hash: {node.blockchain.getLastBlock().current_hash}")
+
+    # print(f"Received Last_Block with current hash: {node.blockchain.getLastBlock().current_hash}")
     cache.set("node", node)
-    print(node.blockchain.chain)
+    # print(node.blockchain.chain)
     return "Success", 200
 
 

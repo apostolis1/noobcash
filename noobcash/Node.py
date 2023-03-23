@@ -7,6 +7,7 @@ from noobcash.utils import create_transaction, transaction_output_from_dict, tra
 import requests
 import time
 from threading import Thread, Event
+
 from noobcash.myEvent import SerializableEvent
 
 
@@ -41,13 +42,16 @@ class Node:
         # Transform the given transaction to a dict to be sent via the rest api
         # Send it to the corresponding api endpoint for each node in the ring
         block_dict = block.to_dict()
+        print(f"I am about to start broadcasting block with hash {block.current_hash}")
         for node in self.ring.values():
             for _ in range(5):
                 try:
                     url = f"http://{node['url']}/block/get"
                     requests.post(url, json=block_dict)
+                    print(f"Successfully sent block with hash {block.current_hash} to {node['url']}")
                     break
                 except Exception as e:
+                    print(f"Exception at broadcast_block, {e}")
                     time.sleep(2)
         return
     
@@ -56,23 +60,36 @@ class Node:
             return
         # if block.validate_block(self.blockchain.difficulty) and self.blockchain.getLastBlock().current_hash == block.previousHash:
         if block.validate_block(self.blockchain.difficulty):
+            # self.event.set()
+            print(f"Event object: {self.event}")
             print("Received a valid block, will check if I am mining already")
             if self.mining:
                 self.mining = False
                 print("I am mining, will stop...")
                 # TODO: stop thread that mines since I received another already mined block
                 self.event.set()
-            if self.blockchain.getLastBlock().current_hash is None:
-                self.blockchain.chain[len(self.blockchain.chain) - 1] = block
-            # self.blockchain.addBlock(block)
+                if self.event.is_set():
+                    print("Local event here is set")
+                self.blockchain.current_block = None
+            else:
+                print("I am not mining, will add block")
+            print(f"About to add block with hash {block.current_hash} at position {len(self.blockchain.chain)}")
+            self.blockchain.addBlock(block)
         return
     
     def mine_block(self, ):
         self.mining = True
         self.event = SerializableEvent()
-        self.blockchain.getLastBlock().get_nonce(self.blockchain.difficulty, self.event)
-        print(f"Finished mining and about to broadcast, hash is {self.blockchain.getLastBlock().current_hash}")
-        self.broadcast_block(self.blockchain.getLastBlock())
+        print(f"Init event object at: {self.event}")
+        # self.event = Event()
+        self.event.clear()
+
+        self.blockchain.current_block.get_nonce(self.blockchain.difficulty, self.event)
+        print(f"Finished mining and about to broadcast, hash is {self.blockchain.current_block.current_hash}")
+        # Not sure about this, but we need to somehow change the variables that indicate that we are mining
+        self.mining = False
+        self.event.set()
+        self.broadcast_block(self.blockchain.current_block)
         return
 
     def add_transaction(self, t: Transaction):

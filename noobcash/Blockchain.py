@@ -14,6 +14,8 @@ class Blockchain:
         self.nodes = nodes
         self.capacity = capacity
         self.difficulty = difficulty
+        # Keep track of new block, has to be mined and verified before being added to the blockchain
+        self.current_block = None
 
     def GenesisBlock(self, bootstrap_address):
         genesis = Block(index=0, previous_hash='1', nonce=0, capacity=self.capacity)
@@ -33,21 +35,20 @@ class Blockchain:
         return
 
     def add_transaction(self, t: Transaction) -> bool:
-        last_block = self.getLastBlock()
-        # Check if last block is the genesis block
-        if last_block.previousHash == '1' or last_block.is_full():
-            new_block = Block(index=last_block.index+1, previous_hash=last_block.current_hash, capacity=self.capacity)
-            self.addBlock(new_block)
+        # TODO: Check if this condition is correct, maybe checks are required in additional places
+        if self.current_block is None or self.getLastBlock() == self.current_block:
+            print("Creating a new current_block and adding transaction there")
+            last_block = self.getLastBlock()
+            new_block = Block(index=last_block.index + 1, previous_hash=last_block.current_hash, capacity=self.capacity)
             new_block.add_transaction(t)
+            self.current_block = new_block
         else:
-            last_block.add_transaction(t)
-        last_block = self.getLastBlock()
-        if last_block.is_full():
+            self.current_block.add_transaction(t)
+        if self.current_block.is_full():
             #last_block.get_nonce(difficulty=self.difficulty)
             return True
             # TODO: We want a new thread to do that, but we need to be careful of new transactions arriving
             # threading.Thread(target=last_block.get_nonce, args=[self.difficulty]).start()
-
         return False
 
     def validate_chain(self):
@@ -58,7 +59,7 @@ class Blockchain:
 
     def to_dict(self):
         chain_list = [i.to_dict() for i in self.chain]
-        print(chain_list)
+        # print(chain_list)
         res = {
             "chain": chain_list,
             "nodes": self.nodes,
