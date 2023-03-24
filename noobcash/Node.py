@@ -8,9 +8,7 @@ import requests
 import time
 import os
 import signal
-# from threading import Thread, Event
-from multiprocessing import Process
-from noobcash.myEvent import SerializableEvent
+from threading import Thread, Event
 
 
 class Node:
@@ -19,9 +17,10 @@ class Node:
         self.ring = {}
         self.wallet = Wallet()
         self.utxos_dict = {}
-        self.mining = True
+        self.mining = False
         self.transaction_pool = []
-        self.event = None
+        self.event = Event()
+        self.event.clear()
         self.child_process_id = None
 
     def broadcast_transaction(self, transaction: Transaction):
@@ -59,6 +58,7 @@ class Node:
     
     def add_block_to_blockchain(self, block: Block):
         if block.previousHash != self.blockchain.getLastBlock().current_hash:
+            print("Block can't be placed at the end of blockchain")
             return
         # if block.validate_block(self.blockchain.difficulty) and self.blockchain.getLastBlock().current_hash == block.previousHash:
         if block.validate_block(self.blockchain.difficulty):
@@ -69,14 +69,14 @@ class Node:
                 self.mining = False
                 print("I am mining, will stop...")
                 # TODO: stop thread that mines since I received another already mined block
-                # self.event.set()
+                self.event.set()
                 # if self.event.is_set():
                 #     print("Local event here is set")
-                try:
-                    os.kill(self.child_process_id, signal.SIGTERM)
-                except Exception as e:
-                    print(f"Exception when killing thread {e}")
-                print("Terminated mining process")
+                # try:
+                #     os.kill(self.child_process_id, signal.SIGTERM)
+                # except Exception as e:
+                #     print(f"Exception when killing thread {e}")
+                print("Set event to true")
                 self.blockchain.current_block = None
             else:
                 print("I am not mining, will add block")
@@ -87,18 +87,22 @@ class Node:
     def mine_block(self):
         self.mining = True
         print("SET MINING TO TRUE")
-        self.blockchain.current_block.get_nonce(self.blockchain.difficulty)
-        print(f"Finished mining and about to broadcast, hash is {self.blockchain.current_block.current_hash}")
+        try:
+            self.blockchain.current_block.get_nonce(self.blockchain.difficulty, self.event)
+        except Exception as e:
+            self.mining = False
+            print("Stopped mining because someone stopped me, setting mining to false and exiting without broadcasting")
+            return
         # Not sure about this, but we need to somehow change the variables that indicate that we are mining
         self.mining = False
         print("SET MINING TO FALSE")
+        print(f"Finished mining and about to broadcast, hash is {self.blockchain.current_block.current_hash}")
         self.broadcast_block(self.blockchain.current_block)
         return
 
     def add_transaction(self, t: Transaction):
         if self.blockchain.add_transaction(t):
             # transaction added filled the block, so I start mining
-            child_process = Process(target=self.mine_block)
+            child_process = Thread(target=self.mine_block)
             child_process.start()
-            self.child_process_id = child_process.pid
         return
