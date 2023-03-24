@@ -5,7 +5,7 @@ from noobcash.Wallet import Wallet
 from noobcash.Node import Node
 from noobcash.Blockchain import Blockchain
 from noobcash.utils import create_utxos_dict_from_transaction_list, blockchain_from_dict, transaction_from_dict, \
-    create_transaction
+    create_transaction, block_from_dict
 import time
 import threading
 
@@ -16,7 +16,7 @@ app.config.from_object('config.Config')
 node = Node()
 transaction_pool = []
 CORS(app)
-
+pool_get_lock = threading.Lock()
 
 # Route registration
 @app.route('/health', methods=['GET'])
@@ -74,9 +74,32 @@ def create_transaction_endpoint():
     if not t.verify():
         print("Transaction received is not valid, not adding it to pool")
         return "Failed", 400
+    pool_get_lock.acquire()
     transaction_pool.append(t)
-
+    print(f"Added transaction to pool, pool length is {len(transaction_pool)}")
+    pool_get_lock.release()
+    # start new thread that handles the transactions from the pool
+    threading.Thread(target=process_transaction_from_pool).start()
     return "Success", 200
+
+
+def process_transaction_from_pool():
+    # TODO: Check if lock needed
+    if not node.mining:
+        pool_get_lock.acquire()
+        if len(transaction_pool) == 0:
+            pool_get_lock.release()
+            print("Pool is empty, returning")
+            return
+        t = transaction_pool.pop()
+        print(f"Removing transaction from pool, new pool length is {len(transaction_pool)}")
+        pool_get_lock.release()
+
+        print(f"Processing transaction {t}")
+        node.add_transaction(t)
+    else:
+        print("Processing transaction halted because I am already mining, assuming someone will trigger me later")
+    return
 
 
 @app.route(rule="/nodes/info", methods=["POST"])
@@ -90,6 +113,23 @@ def get_nodes_info():
 def get_transaction_pool():
     result = {"transactions": [t.to_dict() for t in transaction_pool]}
     return result, 200
+
+
+@app.route(rule="/block/get", methods=["POST"])
+def receive_block():
+    # Endpoint where each node is waiting for blocks to be broadcasted
+    print("receive_block method has been called properly")
+    block_dict = request.json
+    block = block_from_dict(block_dict)
+    print(f"Received Block with current hash: {block.current_hash}")
+    if block.current_hash is None:
+        raise Exception("None current hash received")
+    print(f"Mining value: {node.mining}")
+    node.add_block_to_blockchain(block)
+    # Process next transaction in pool
+    threading.Thread(target=process_transaction_from_pool).start()
+    return "Success", 200
+
 
 
 def all_nodes_here():
@@ -160,4 +200,4 @@ if __name__ == '__main__':
         utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
         node.utxos_dict = utxos_dict
 
-    app.run(host='0.0.0.0', port=port, threaded=False)
+    app.run(host='0.0.0.0', port=port, threaded=True)
