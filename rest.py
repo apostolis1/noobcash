@@ -4,10 +4,13 @@ from flask_cors import CORS
 from noobcash.Wallet import Wallet
 from noobcash.Node import Node
 from noobcash.Blockchain import Blockchain
+from noobcash.Transaction import Transaction
 from noobcash.utils import create_utxos_dict_from_transaction_list, blockchain_from_dict, transaction_from_dict, \
-    create_transaction, block_from_dict
+    create_transaction, block_from_dict, check_utxos
 import time
+from typing import List
 import threading
+from copy import deepcopy
 
 
 # App initialization and global declarations
@@ -17,6 +20,7 @@ node = Node()
 transaction_pool = []
 CORS(app)
 pool_get_lock = threading.Lock()
+utxos_lock = threading.Lock()
 
 # Route registration
 @app.route('/health', methods=['GET'])
@@ -69,14 +73,17 @@ def create_transaction_endpoint():
     # Simply add transaction to pool of pending transactions
     transaction_dict = request.json
     # print(transaction_dict)
+    pool_get_lock.acquire()
     print("Received transaction")
     t = transaction_from_dict(transaction_dict)
+    print(f"Receiver address: \t {t.receiver_address}")
     if not t.verify():
         print("Transaction received is not valid, not adding it to pool")
         return "Failed", 400
-    pool_get_lock.acquire()
     transaction_pool.append(t)
     print(f"Added transaction to pool, pool length is {len(transaction_pool)}")
+    for i in transaction_pool:
+        print(f"Receiver address: \t {i.receiver_address}")
     pool_get_lock.release()
     # start new thread that handles the transactions from the pool
     threading.Thread(target=process_transaction_from_pool).start()
@@ -91,7 +98,7 @@ def process_transaction_from_pool():
             pool_get_lock.release()
             print("Pool is empty, returning")
             return
-        t = transaction_pool.pop()
+        t = transaction_pool.pop(0)
         print(f"Removing transaction from pool, new pool length is {len(transaction_pool)}")
         pool_get_lock.release()
 
@@ -106,7 +113,17 @@ def process_transaction_from_pool():
 def get_nodes_info():
     node_info = request.json["nodes"]
     node.ring = node_info
+    # for i in node.ring:
+    #     if i not in
     return "Success", 200
+
+
+@app.route(rule="/utxos")
+def get_utxos():
+    res = {}
+    for k in node.utxos_dict.keys():
+        res[k] = [i.to_dict() for i in node.utxos_dict[k]]
+    return res, 200
 
 
 @app.route(rule="/transaction_pool")
@@ -117,6 +134,7 @@ def get_transaction_pool():
 
 @app.route(rule="/block/get", methods=["POST"])
 def receive_block():
+    # TODO: Check if lock is needed when calling add_block_to_blockchain
     # Endpoint where each node is waiting for blocks to be broadcasted
     print("receive_block method has been called properly")
     block_dict = request.json
@@ -125,7 +143,30 @@ def receive_block():
     if block.current_hash is None:
         raise Exception("None current hash received")
     print(f"Mining value: {node.mining}")
+    # Check
+    # utxos_dict = {}
+    utxos_lock.acquire()
+    utxos_copy = deepcopy(node.utxos_dict)
+    if not check_utxos(utxos_copy, block):
+        print("Utxos are not good")
+        print(node.utxos_dict)
+        for t in block.list_of_transactions:
+            for input_ in t.transaction_inputs:
+                print(t)
+        return "Utxos don't match, not adding to blockchain", 400
     node.add_block_to_blockchain(block)
+    # Update utxos based on the new block
+    # TODO: Check if lock is needed
+
+    for transaction in block.list_of_transactions:
+        for t_input in transaction.transaction_inputs:
+            node.utxos_dict[t_input.recipient].remove(t_input)
+        for t_output in transaction.transaction_outputs:
+            try:
+                node.utxos_dict[t_output.recipient].append(t_output)
+            except KeyError:
+                node.utxos_dict[t_output.recipient] = [t_output]
+    utxos_lock.release()
     # Process next transaction in pool
     threading.Thread(target=process_transaction_from_pool).start()
     return "Success", 200
@@ -152,7 +193,10 @@ def all_nodes_here():
         t = create_transaction(my_wallet, receiving_node["public_key"], 100, utxos)
         t.sign_transaction(my_wallet.private_key)
         node.utxos_dict = utxos
-        threading.Thread(target=node.broadcast_transaction, args=[t]).start()
+        thread = threading.Thread(target=node.broadcast_transaction, args=[t])
+        thread.start()
+        thread.join()
+        print(f"Successfully broadcasted transaction {t}")
 
 
 if __name__ == '__main__':
@@ -199,5 +243,6 @@ if __name__ == '__main__':
         node.blockchain = blockchain
         utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
         node.utxos_dict = utxos_dict
+        print(utxos_dict)
 
     app.run(host='0.0.0.0', port=port, threaded=True)

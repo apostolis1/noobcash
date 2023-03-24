@@ -36,7 +36,7 @@ class Node:
                 except Exception as e:
                     print("Got exception")
                     print(e)
-                    time.sleep(2)
+                    time.sleep(1)
         return
 
     def broadcast_block(self, block: Block):
@@ -59,6 +59,7 @@ class Node:
     def add_block_to_blockchain(self, block: Block):
         if block.previousHash != self.blockchain.getLastBlock().current_hash:
             print("Block can't be placed at the end of blockchain")
+
             return
         # if block.validate_block(self.blockchain.difficulty) and self.blockchain.getLastBlock().current_hash == block.previousHash:
         if block.validate_block(self.blockchain.difficulty):

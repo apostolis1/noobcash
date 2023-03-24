@@ -1,6 +1,8 @@
 from time import time
 from Crypto.Hash import SHA256
 import random
+from typing import List
+from noobcash.Transaction import Transaction
 from threading import Event
 
 class Block:
@@ -15,7 +17,7 @@ class Block:
 			self.timestamp = time()
 		self.nonce = nonce
 		self.current_hash = current_hash
-		self.list_of_transactions = list_of_transactions
+		self.list_of_transactions: List[Transaction] = list_of_transactions
 		self.capacity = capacity  # pos mporo na paro tin parametro capacity apto config.py?
 
 	def is_full(self):

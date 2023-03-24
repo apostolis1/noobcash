@@ -108,3 +108,18 @@ def create_utxos_dict_from_transaction_list(transaction_list: list):
         except Exception as e:
             d[transaction_output.recipient] = [transaction_output]
     return d
+
+
+def check_utxos(utxos_dict, block: Block) ->bool:
+    for transaction in block.list_of_transactions:
+        sender = transaction.sender_address
+        for t_input in transaction.transaction_inputs:
+            if t_input not in utxos_dict[sender]:
+                print(f"Can't find {t_input} with sender {sender}")
+                return False
+        for t_output in transaction.transaction_outputs:
+            try:
+                utxos_dict[t_output.recipient].append(t_output)
+            except KeyError:
+                utxos_dict[t_output.recipient] = [t_output]
+    return True
