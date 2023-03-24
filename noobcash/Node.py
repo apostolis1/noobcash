@@ -23,7 +23,6 @@ class Node:
         self.transaction_pool = []
         self.event = None
         self.child_process_id = None
-        print(hex(id(self.mining)))
 
     def broadcast_transaction(self, transaction: Transaction):
         # Transform the given transaction to a dict to be sent via the rest api

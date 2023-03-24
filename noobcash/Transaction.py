@@ -70,7 +70,8 @@ class Transaction:
             print("The signature is valid.")
         except (ValueError, TypeError):
             print("The signature is NOT valid.")
-        return
+            return False
+        return True
 
     @staticmethod
     def find_transaction_inputs_for_amount(list_of_utxos, amount):
