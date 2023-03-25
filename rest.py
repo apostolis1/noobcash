@@ -147,6 +147,8 @@ def receive_block():
     # utxos_dict = {}
     utxos_lock.acquire()
     utxos_copy = deepcopy(node.utxos_dict)
+    print(node.utxos_dict)
+    print(node.blockchain.utxos)
     if not check_utxos(utxos_copy, block):
         print("Utxos are not good")
         print(node.utxos_dict)
@@ -217,6 +219,10 @@ if __name__ == '__main__':
         blockchain.GenesisBlock(node.wallet.public_key)
         node.blockchain = blockchain
         utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
+        # We want to keep a copy of utxos to blockchain
+        # And a local copy to each node
+        node.utxos_dict = utxos_dict
+        node.blockchain.utxos = utxos_dict
         master_node = {
             "id_0": {
                 "url": f"127.0.0.1:{port}",
@@ -224,7 +230,6 @@ if __name__ == '__main__':
             }
         }
         node.ring = master_node
-        node.utxos_dict = utxos_dict
     else:
         print("Creating participation node")
         data = {
