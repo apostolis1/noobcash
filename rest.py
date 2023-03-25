@@ -103,7 +103,17 @@ def process_transaction_from_pool():
         pool_get_lock.release()
 
         print(f"Processing transaction {t}")
-        node.add_transaction(t)
+        #TODO: When I process a transaction I need to fix my local utxos_dict
+        utxos_lock.acquire()
+        node.add_transaction(t)        
+        for t_input in t.transaction_inputs:
+            node.utxos_dict[t_input.recipient].remove(t_input)
+        for t_output in t.transaction_outputs:
+            try:
+                node.utxos_dict[t_output.recipient].append(t_output)
+            except KeyError:
+                node.utxos_dict[t_output.recipient] = [t_output]
+        utxos_lock.release()
     else:
         print("Processing transaction halted because I am already mining, assuming someone will trigger me later")
     return
@@ -147,27 +157,28 @@ def receive_block():
     # utxos_dict = {}
     utxos_lock.acquire()
     utxos_copy = deepcopy(node.utxos_dict)
-    print(node.utxos_dict)
-    print(node.blockchain.utxos)
     if not check_utxos(utxos_copy, block):
         print("Utxos are not good")
-        print(node.utxos_dict)
-        for t in block.list_of_transactions:
-            for input_ in t.transaction_inputs:
-                print(t)
+        # print(node.utxos_dict)
+        # for t in block.list_of_transactions:
+        #    for input_ in t.transaction_inputs:
+        #       print(t)
         return "Utxos don't match, not adding to blockchain", 400
     node.add_block_to_blockchain(block)
     # Update utxos based on the new block
     # TODO: Check if lock is needed
-
+    print("Reached new added point")
     for transaction in block.list_of_transactions:
         for t_input in transaction.transaction_inputs:
             node.utxos_dict[t_input.recipient].remove(t_input)
+            node.blockchain.utxos[t_input.recipient].remove(t_input)
         for t_output in transaction.transaction_outputs:
             try:
                 node.utxos_dict[t_output.recipient].append(t_output)
+                node.blockchain.utxos[t_output.recipient].append(t_output)
             except KeyError:
                 node.utxos_dict[t_output.recipient] = [t_output]
+                node.blockchain.utxos[t_output.recipient] = (t_output)
     utxos_lock.release()
     # Process next transaction in pool
     threading.Thread(target=process_transaction_from_pool).start()
@@ -248,6 +259,6 @@ if __name__ == '__main__':
         node.blockchain = blockchain
         utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
         node.utxos_dict = utxos_dict
-        print(utxos_dict)
+        # print(utxos_dict)
 
     app.run(host='0.0.0.0', port=port, threaded=True)

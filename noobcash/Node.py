@@ -39,7 +39,7 @@ class Node:
                     time.sleep(1)
         return
 
-    def broadcast_block_and_utxos(self, block: Block):
+    def broadcast_block(self, block: Block):
         # Transform the given transaction to a dict to be sent via the rest api
         # Send it to the corresponding api endpoint for each node in the ring
         block_dict = block.to_dict()
@@ -81,14 +81,6 @@ class Node:
                 self.blockchain.current_block = None
             else:
                 print("I am not mining, will add block")
-            for transaction in block.list_of_transactions:
-                for t_input in transaction.transaction_inputs:
-                    self.utxos_dict[t_input.recipient].remove(t_input)
-                for t_output in transaction.transaction_outputs:
-                    try:
-                        self.utxos_dict[t_output.recipient].append(t_output)
-                    except KeyError:
-                        self.utxos_dict[t_output.recipient] = [t_output]
             print(f"About to add block with hash {block.current_hash} at position {len(self.blockchain.chain)}")
             self.blockchain.addBlock(block)
         return
@@ -108,7 +100,7 @@ class Node:
         print(f"Finished mining and about to broadcast, hash is {self.blockchain.current_block.current_hash}")
         # Since I finished mining a block I broadcast the block that I mined along with
         # the updated utxos list that is tied to the blockchain
-        self.broadcast_block_and_utxos(self.blockchain.current_block)
+        self.broadcast_block(self.blockchain.current_block)
         return
 
     def add_transaction(self, t: Transaction):
