@@ -16,6 +16,7 @@ class Blockchain:
         self.difficulty = difficulty
         # Keep track of new block, has to be mined and verified before being added to the blockchain
         self.current_block = None
+        self.utxos_dict = {}
 
     def GenesisBlock(self, bootstrap_address):
         genesis = Block(index=0, previous_hash='1', nonce=0, capacity=self.capacity)
