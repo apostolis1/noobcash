@@ -13,7 +13,7 @@ class TransactionOutput:
             self.unique_id = self.get_unique_id()
 
     def get_unique_id(self):
-        value_to_hash = self.transaction_id + self.recipient + str(self.amount) + str(time())
+        value_to_hash = self.transaction_id + self.recipient + str(self.amount)
         hash_object = SHA256.new(data=value_to_hash.encode())
         return hash_object.hexdigest()
 

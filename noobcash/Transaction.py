@@ -92,7 +92,7 @@ class Transaction:
     def create_transaction_outputs(self, sender_amount_before):
         recipient_output = TransactionOutput(self.transaction_id, self.receiver_address, self.amount)
         sender_output = TransactionOutput(self.transaction_id, self.sender_address, sender_amount_before - self.amount)
-        return [recipient_output, sender_output]
+        return [sender_output, recipient_output]
 
     def __eq__(self, other):
         if not isinstance(other, Transaction):

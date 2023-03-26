@@ -4,10 +4,10 @@ from noobcash.Block import Block
 import time
 from noobcash.Transaction import Transaction
 from noobcash.TransactionOutput import TransactionOutput
-
+from copy import deepcopy
 
 class Blockchain:
-    def __init__(self, nodes, chain=None, capacity=None, difficulty=None) -> None:
+    def __init__(self, nodes, chain=None, capacity=None, difficulty=None, utxos_dict=None) -> None:
         if chain is None:
             chain = []
         self.chain: list = chain
@@ -16,7 +16,13 @@ class Blockchain:
         self.difficulty = difficulty
         # Keep track of new block, has to be mined and verified before being added to the blockchain
         self.current_block = None
-        self.utxos_dict = {}
+        # Keep track of the valid utxos for each node, this could also be derived from traversing the whole chain
+        # However this is slow and should only be done when absolutely necessary, so update them each time a block is
+        # added
+        if utxos_dict is None:
+            self.utxos_dict = {}
+        else:
+            self.utxos_dict = utxos_dict
 
     def GenesisBlock(self, bootstrap_address):
         genesis = Block(index=0, previous_hash='1', nonce=0, capacity=self.capacity)
@@ -26,12 +32,30 @@ class Blockchain:
         genesis.add_transaction(genesis_transaction)
         genesis.current_hash = genesis.my_hash(nonce = 0)
         self.chain.append(genesis)
+        # Update the utxos_dict
+        self.utxos_dict[bootstrap_address] = deepcopy(genesis_transaction.transaction_outputs)
         return
 
     def getLastBlock(self) -> Block:
         return self.chain[len(self.chain) - 1]
 
     def addBlock(self, newBlock : Block):
+        # When adding a block to the chain we also want to update the utxos of the blockchain
+        # This assumes that we already checked that the transactions of the block we are adding
+        # are valid, meaning checking the utxos of the blockchain
+        # Update transactions
+        for transaction in newBlock.list_of_transactions:
+            for t_input in transaction.transaction_inputs:
+                try:
+                    self.utxos_dict[t_input.recipient].remove(t_input)
+                except:
+                    print("Cant find it")
+            for t_output in transaction.transaction_outputs:
+                try:
+                    self.utxos_dict[t_output.recipient].append(t_output)
+                except KeyError:
+                    self.utxos_dict[t_output.recipient] = [t_output]
+        # Finally add the block to the chain
         self.chain.append(newBlock)
         return
 
@@ -65,7 +89,10 @@ class Blockchain:
             "chain": chain_list,
             "nodes": self.nodes,
             "capacity": self.capacity,
-            "difficulty": self.difficulty
+            "difficulty": self.difficulty,
+            "utxos_dict": {
+                k: [i.to_dict() for i in v] for k, v in self.utxos_dict.items()
+            }
         }
         return res
 

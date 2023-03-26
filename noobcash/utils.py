@@ -5,38 +5,33 @@ from noobcash.Transaction import Transaction
 from noobcash.TransactionOutput import TransactionOutput
 
 
-def create_transaction(sender_wallet: Wallet, receiver_address, amount, utxos_dict: dict):
+def create_transaction(sender_wallet: Wallet, receiver_address, amount, utxos_list: list):
     # utxos_dict = {
     #   address1: [utxo0, utxo1 ,...],
     #   address2: [utxo0, utxo1, ...],
     #   }
     #
-    sender_utxos = utxos_dict[sender_wallet.public_key]
-    previous_amount = sum(i.amount for i in sender_utxos)
+    previous_amount = sum(i.amount for i in utxos_list)
     # if amount > previous_amount:
     #     raise Exception()
-    utxos_to_spend = Transaction.find_transaction_inputs_for_amount(sender_utxos, amount)
+    utxos_to_spend = Transaction.find_transaction_inputs_for_amount(utxos_list, amount)
     # for i in utxos_to_spend:
     #     print(i)
     inputs = utxos_to_spend
     # Actually spend them
     for i in inputs:
-        for j in utxos_dict[sender_wallet.public_key]:
+        for j in utxos_list:
             if i.unique_id == j.unique_id:
                 # print("found")
-                utxos_dict[sender_wallet.public_key].remove(j)
+                utxos_list.remove(j)
 
     transaction = Transaction(sender_address=sender_wallet.public_key, recipient_address=receiver_address, value=amount,
                               transaction_inputs=inputs)
     outputs = transaction.create_transaction_outputs(previous_amount)
     transaction.transaction_outputs = outputs
     # update the list of utxos
-    for i in outputs:
-        # print(i)
-        try:
-            utxos_dict[i.recipient].append(i)
-        except KeyError:
-            utxos_dict[i.recipient] = [i]
+    # The first output is always the remaining amount to us
+    utxos_list.append(outputs[0])
     transaction.sign_transaction(sender_wallet.private_key)
     return transaction
 
@@ -96,7 +91,10 @@ def blockchain_from_dict(blockchain_dict: dict) -> Blockchain:
     chain = [block_from_dict(i) for i in blockchain_dict["chain"]]
     capacity = blockchain_dict["capacity"]
     difficulty = blockchain_dict["difficulty"]
-    blockchain = Blockchain(nodes, chain, capacity, difficulty)
+    utxos_dict = {
+        k: [transaction_output_from_dict(i) for i in v] for k, v in blockchain_dict["utxos_dict"].items()
+    }
+    blockchain = Blockchain(nodes, chain, capacity, difficulty, utxos_dict)
     return blockchain
 
 
