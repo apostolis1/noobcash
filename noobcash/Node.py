@@ -62,11 +62,10 @@ class Node:
     def add_block_to_blockchain(self, block: Block):
         if block.previousHash != self.blockchain.getLastBlock().current_hash:
             print("Block can't be placed at the end of blockchain")
-
+            # TODO: We probably need to resolve_conflicts here, careful with locks and events
             return
         # if block.validate_block(self.blockchain.difficulty) and self.blockchain.getLastBlock().current_hash == block.previousHash:
         if block.validate_block(self.blockchain.difficulty):
-            # self.event.set()
             print("Received a valid block, will check if I am mining already")
             if self.mining:
                 print("SET MINING TO FALSE")
@@ -74,12 +73,6 @@ class Node:
                 print("I am mining, will stop...")
                 # TODO: stop thread that mines since I received another already mined block
                 self.event.set()
-                # if self.event.is_set():
-                #     print("Local event here is set")
-                # try:
-                #     os.kill(self.child_process_id, signal.SIGTERM)
-                # except Exception as e:
-                #     print(f"Exception when killing thread {e}")
                 print("Set event to true")
                 self.blockchain.current_block = None
             else:

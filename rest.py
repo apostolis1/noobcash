@@ -102,6 +102,15 @@ def process_transaction_from_pool():
         print(f"Removing transaction from pool, new pool length is {len(transaction_pool)}")
         pool_get_lock.release()
         utxos_lock.acquire()
+        # TODO: Check if we need to validate transactions individually or if it sufficient to simply check the block
+        #  altogether as we are doing now
+        #  From correctness point of view it is sufficient, since after all the block will have only valid
+        #  transactions, however we might discard some transactions if they are included into a block with a single
+        #  invalid transaction
+        #  If we need to check them individually, we need to change node.utxos_list back to a dict so we can keep track
+        #  of the utxos of each node. Then, after the transaction is added to the current block we need to udpate the
+        #  node.utxos_dict
+
         # TODO:  this does not work as bootstrap node cannot find the t_input in node.utxos_dict
         # and thus it raises error
         # for t_input in t.transaction_inputs:
@@ -155,12 +164,9 @@ def receive_block():
     print(f"Mining value: {node.mining}")
     utxos_lock.acquire()
     utxos_copy = deepcopy(node.blockchain.utxos_dict)
+    # Check the transactions in the block compared to the ones in the blockchain to see if we can add the block
     if not check_utxos(utxos_copy, block):
         print("Utxos are not good")
-        # print(node.utxos_dict)
-        # for t in block.list_of_transactions:
-        #    for input_ in t.transaction_inputs:
-        #        print(t)
         return "Utxos don't match, not adding to blockchain", 400
     # Add block to blockchain, this handles updating the utxos dict of the blockchain as well as our local utxos_list
     node.add_block_to_blockchain(block)
@@ -214,7 +220,6 @@ if __name__ == '__main__':
         blockchain = Blockchain(nodes, capacity=capacity, difficulty=difficulty)
         blockchain.GenesisBlock(node.wallet.public_key)
         node.blockchain = blockchain
-        # utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
         master_node = {
             "id_0": {
                 "url": f"127.0.0.1:{port}",
@@ -239,12 +244,10 @@ if __name__ == '__main__':
             raise Exception("Blockchain is not valid")
         print("Blockchain received is valid")
         node.blockchain = blockchain
-        # utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
         # If there are transaction outputs for us, get them, otherwise the list is empty
         try:
             node.utxos_list = blockchain.utxos_dict[node.wallet.address]
         except KeyError:
             node.utxos_list = []
-        # print(utxos_dict)
 
     app.run(host='0.0.0.0', port=port, threaded=True)

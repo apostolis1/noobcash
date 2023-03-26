@@ -19,15 +19,6 @@ class Transaction:
         self.transaction_id = transaction_id
         self.transaction_inputs = transaction_inputs
         self.transaction_outputs = transaction_outputs
-        # self.sender_address: To public key του wallet από το οποίο προέρχονται τα χρήματα
-        # self.receiver_address: To public key του wallet στο οποίο θα καταλήξουν τα χρήματα
-        # self.amount: το ποσό που θα μεταφερθεί
-        # self.transaction_id: το hash του transaction
-        # self.transaction_inputs: λίστα από Transaction Input
-        # self.transaction_outputs: λίστα από Transaction Output
-        # Transaction Output = (unique id, id transaction, recipient, amount)
-        # unique_id = node_id +
-        # selfSignature
 
     def to_dict(self):
         if self.signature is None:
@@ -59,7 +50,6 @@ class Transaction:
         rsa_key = RSA.importKey(private_key)
         signature = pkcs1_15.new(rsa_key).sign(transaction_hash)
         self.signature = signature
-        # print("Changed signature...")
         return
 
     def verify(self):
