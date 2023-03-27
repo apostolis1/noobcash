@@ -3,14 +3,14 @@ from noobcash.Block import Block
 from noobcash.Wallet import Wallet
 from noobcash.Transaction import Transaction
 from noobcash.TransactionOutput import TransactionOutput
-
+from copy import deepcopy
 
 def create_transaction(sender_wallet: Wallet, receiver_address, amount, utxos_dict: dict):
     # utxos_dict = {
     #   address1: [utxo0, utxo1 ,...],
     #   address2: [utxo0, utxo1, ...],
     #   }
-    #
+
     previous_amount = sum(i.amount for i in utxos_dict[sender_wallet.public_key])
     # if amount > previous_amount:
     #     raise Exception()
@@ -113,12 +113,13 @@ def create_utxos_dict_from_transaction_list(transaction_list: list):
     return d
 
 
-def check_utxos(utxos_dict, block: Block) ->bool:
+def check_utxos(utxos_dict_, block: Block) ->bool:
+    utxos_dict = deepcopy(utxos_dict_)
     for transaction in block.list_of_transactions:
         sender = transaction.sender_address
         for t_input in transaction.transaction_inputs:
             if t_input not in utxos_dict[sender]:
-                print(f"Can't find {t_input} with sender {sender}")
+                print(f"Can't find {t_input.unique_id} with sender {sender[-4:]}")
                 return False
         for t_output in transaction.transaction_outputs:
             try:

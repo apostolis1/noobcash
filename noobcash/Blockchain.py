@@ -5,6 +5,7 @@ import time
 from noobcash.Transaction import Transaction
 from noobcash.TransactionOutput import TransactionOutput
 from copy import deepcopy
+from typing import List
 
 class Blockchain:
     def __init__(self, nodes, chain=None, capacity=None, difficulty=None, utxos_dict=None) -> None:
@@ -39,7 +40,7 @@ class Blockchain:
     def getLastBlock(self) -> Block:
         return self.chain[len(self.chain) - 1]
 
-    def addBlock(self, newBlock : Block):
+    def addBlock(self, newBlock: Block):
         # When adding a block to the chain we also want to update the utxos of the blockchain
         # This assumes that we already checked that the transactions of the block we are adding
         # are valid, meaning checking the utxos of the blockchain
@@ -48,9 +49,12 @@ class Blockchain:
             for t_input in transaction.transaction_inputs:
                 try:
                     self.utxos_dict[t_input.recipient].remove(t_input)
-                except:
+                except Exception as e:
                     print("Cant find it")
+                    print(e)
+                    raise e
             for t_output in transaction.transaction_outputs:
+                print(f"Adding output {t_output.unique_id} to recipient {t_output.recipient[-4:]}")
                 try:
                     self.utxos_dict[t_output.recipient].append(t_output)
                 except KeyError:

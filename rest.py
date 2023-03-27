@@ -5,10 +5,9 @@ from noobcash.Wallet import Wallet
 from noobcash.Node import Node
 from noobcash.Blockchain import Blockchain
 from noobcash.Transaction import Transaction
-from noobcash.utils import create_utxos_dict_from_transaction_list, blockchain_from_dict, transaction_from_dict, \
+from noobcash.utils import blockchain_from_dict, transaction_from_dict, \
     create_transaction, block_from_dict, check_utxos
 import time
-from typing import List
 import threading
 from copy import deepcopy
 
@@ -21,6 +20,7 @@ transaction_pool = []
 CORS(app)
 pool_get_lock = threading.Lock()
 utxos_lock = threading.Lock()
+
 
 # Route registration
 @app.route('/health', methods=['GET'])
@@ -98,26 +98,28 @@ def process_transaction_from_pool():
             pool_get_lock.release()
             print("Pool is empty, returning")
             return
-        t : Transaction = transaction_pool.pop(0)
+        t: Transaction = transaction_pool.pop(0)
         print(f"Removing transaction from pool, new pool length is {len(transaction_pool)}")
         pool_get_lock.release()
         utxos_lock.acquire()
-    
+        print("Processing transaction ")
         # TODO:  this does not work as bootstrap node cannot find the t_input in node.utxos_dict
         # and thus it raises error
         if not t.verify():
             return
-        for t_input in t.transaction_inputs:
-            if not t_input in node.blockchain.utxos_dict[t_input.recipient]:
-                print("Could not find what you asked for")
-            node.blockchain.utxos_dict[t_input.recipient].remove(t_input)
-        for t_output in t.transaction_outputs:
-            try:
-                node.utxos_dict[t_output.recipient].append(t_output)
-            except KeyError:
-                node.utxos_dict[t_output.recipient] = [t_output]
+        # We don't check our own transactions, because we have already removed the utxos during create_transaction
+        if not t.sender_address == node.wallet.address:
+            for t_input in t.transaction_inputs:
+                if t_input not in node.utxos_dict[t_input.recipient]:
+                    print(f"Cant find  input with id: {t_input.unique_id} and amount: {t_input.amount} in {[i.unique_id  for i in node.utxos_dict[t_input.recipient]]}")
+                node.utxos_dict[t_input.recipient].remove(t_input)
+            for t_output in t.transaction_outputs:
+                try:
+                    node.utxos_dict[t_output.recipient].append(t_output)
+                except KeyError:
+                    node.utxos_dict[t_output.recipient] = [t_output]
+        # print(f"Processing transaction {t}")
         utxos_lock.release()
-        print(f"Processing transaction {t}")
         node.add_transaction(t)
     else:
         print("Processing transaction halted because I am already mining, assuming someone will trigger me later")
@@ -131,11 +133,13 @@ def get_nodes_info():
     return "Success", 200
 
 
-@app.route(rule="/utxos")
+@app.route(rule="/utxos/all")
 def get_utxos():
+    print("Trying to get utxos from blockchain")
     res = {}
     for k in node.blockchain.utxos_dict.keys():
         res[k] = [i.to_dict() for i in node.blockchain.utxos_dict[k]]
+    print("Got utxos from blockchain, returning")
     return res, 200
 
 
@@ -149,7 +153,7 @@ def get_transaction_pool():
 def receive_block():
     # TODO: Check if lock is needed when calling add_block_to_blockchain
     # Endpoint where each node is waiting for blocks to be broadcasted
-    print("receive_block method has been called properly")
+    # print("receive_block method has been called properly")
     block_dict = request.json
     block = block_from_dict(block_dict)
     print(f"Received Block with current hash: {block.current_hash}")
@@ -160,7 +164,9 @@ def receive_block():
     utxos_copy = deepcopy(node.blockchain.utxos_dict)
     # Check the transactions in the block compared to the ones in the blockchain to see if we can add the block
     if not check_utxos(utxos_copy, block):
+        print(f"Current blockchain has length {len(node.blockchain.chain)}")
         print("Utxos are not good")
+        utxos_lock.release()
         return "Utxos don't match, not adding to blockchain", 400
     # Add block to blockchain, this handles updating the utxos dict of the blockchain as well as our local utxos_dict
     node.add_block_to_blockchain(block)
@@ -183,16 +189,20 @@ def all_nodes_here():
         }
         requests.post(url=url, json=data)
     time.sleep(1)
+
+
     for receiving_node in existing_nodes.values():
         my_wallet: Wallet = node.wallet
         if receiving_node["public_key"] == my_wallet.public_key:
             continue
+        utxos_lock.acquire()
         utxos = node.utxos_dict
         t = create_transaction(my_wallet, receiving_node["public_key"], 100, utxos)
         # TODO: perhaps this signing here is not needed as I sign the transaction
         # inside create_transaction method
         t.sign_transaction(my_wallet.private_key)
         node.utxos_dict = utxos
+        utxos_lock.release()
         thread = threading.Thread(target=node.broadcast_transaction, args=[t])
         thread.start()
         thread.join()
@@ -223,7 +233,7 @@ if __name__ == '__main__':
             }
         }
         node.ring = master_node
-        node.utxos_dict = {node.wallet.public_key : node.blockchain.chain[0].list_of_transactions[0].transaction_outputs}
+        node.utxos_dict = {node.wallet.public_key : deepcopy(node.blockchain.chain[0].list_of_transactions[0].transaction_outputs)}
     else:
         print("Creating participation node")
         data = {
@@ -241,6 +251,6 @@ if __name__ == '__main__':
         print("Blockchain received is valid")
         node.blockchain = blockchain
         # If there are transaction outputs for us, get them, otherwise the list is empty
-        node.utxos_dict = node.blockchain.utxos_dict
+        node.utxos_dict = deepcopy(node.blockchain.utxos_dict)
         
     app.run(host='0.0.0.0', port=port, threaded=True)

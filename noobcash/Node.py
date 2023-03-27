@@ -8,6 +8,7 @@ import requests
 import time
 import os
 import signal
+from copy import deepcopy
 from threading import Thread, Event
 
 
@@ -80,7 +81,7 @@ class Node:
             print(f"About to add block with hash {block.current_hash} at position {len(self.blockchain.chain)}")
             self.blockchain.addBlock(block)
             # Update our utxos list accordingly
-            self.utxos_dict = self.blockchain.utxos_dict
+            self.utxos_dict = deepcopy(self.blockchain.utxos_dict)
         return
     
     def mine_block(self):

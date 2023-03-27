@@ -3,6 +3,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
 # from Crypto.Cipher import PKCS1_v1_5
 from noobcash.TransactionOutput import TransactionOutput
+from typing import List
 
 
 class Transaction:
@@ -17,8 +18,8 @@ class Transaction:
         self.amount = value
         self.signature = signature
         self.transaction_id = transaction_id
-        self.transaction_inputs = transaction_inputs
-        self.transaction_outputs = transaction_outputs
+        self.transaction_inputs: List[TransactionOutput] = transaction_inputs
+        self.transaction_outputs: List[TransactionOutput] = transaction_outputs
 
     def to_dict(self):
         if self.signature is None:
@@ -57,9 +58,9 @@ class Transaction:
         transaction_hash = self.calculate_hash()
         try:
             pkcs1_15.new(public_key).verify(transaction_hash, self.signature)
-            print("The signature is valid.")
+            # print("The signature is valid.")
         except (ValueError, TypeError):
-            print("The signature is NOT valid.")
+            # print("The signature is NOT valid.")
             return False
         return True
 
