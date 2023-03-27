@@ -5,25 +5,25 @@ from noobcash.Transaction import Transaction
 from noobcash.TransactionOutput import TransactionOutput
 
 
-def create_transaction(sender_wallet: Wallet, receiver_address, amount, utxos_list: list):
+def create_transaction(sender_wallet: Wallet, receiver_address, amount, utxos_dict: dict):
     # utxos_dict = {
     #   address1: [utxo0, utxo1 ,...],
     #   address2: [utxo0, utxo1, ...],
     #   }
     #
-    previous_amount = sum(i.amount for i in utxos_list)
+    previous_amount = sum(i.amount for i in utxos_dict[sender_wallet.public_key])
     # if amount > previous_amount:
     #     raise Exception()
-    utxos_to_spend = Transaction.find_transaction_inputs_for_amount(utxos_list, amount)
+    utxos_to_spend = Transaction.find_transaction_inputs_for_amount(utxos_dict[sender_wallet.public_key], amount)
     # for i in utxos_to_spend:
     #     print(i)
     inputs = utxos_to_spend
     # Actually spend them
     for i in inputs:
-        for j in utxos_list:
+        for j in utxos_dict[sender_wallet.public_key]:
             if i.unique_id == j.unique_id:
                 # print("found")
-                utxos_list.remove(j)
+                utxos_dict[sender_wallet.public_key].remove(j)
 
     transaction = Transaction(sender_address=sender_wallet.public_key, recipient_address=receiver_address, value=amount,
                               transaction_inputs=inputs)
@@ -31,7 +31,12 @@ def create_transaction(sender_wallet: Wallet, receiver_address, amount, utxos_li
     transaction.transaction_outputs = outputs
     # update the list of utxos
     # The first output is always the remaining amount to us
-    utxos_list.append(outputs[0])
+    for i in outputs:
+        # print(i)
+        try:
+            utxos_dict[i.recipient].append(i)
+        except KeyError:
+            utxos_dict[i.recipient] = [i]
     transaction.sign_transaction(sender_wallet.private_key)
     return transaction
 

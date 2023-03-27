@@ -98,30 +98,24 @@ def process_transaction_from_pool():
             pool_get_lock.release()
             print("Pool is empty, returning")
             return
-        t = transaction_pool.pop(0)
+        t : Transaction = transaction_pool.pop(0)
         print(f"Removing transaction from pool, new pool length is {len(transaction_pool)}")
         pool_get_lock.release()
         utxos_lock.acquire()
-        # TODO: Check if we need to validate transactions individually or if it sufficient to simply check the block
-        #  altogether as we are doing now
-        #  From correctness point of view it is sufficient, since after all the block will have only valid
-        #  transactions, however we might discard some transactions if they are included into a block with a single
-        #  invalid transaction
-        #  If we need to check them individually, we need to change node.utxos_list back to a dict so we can keep track
-        #  of the utxos of each node. Then, after the transaction is added to the current block we need to udpate the
-        #  node.utxos_dict
-
+    
         # TODO:  this does not work as bootstrap node cannot find the t_input in node.utxos_dict
         # and thus it raises error
-        # for t_input in t.transaction_inputs:
-        #     if not t_input in node.blockchain.utxos_dict[t_input.recipient]:
-        #         print("Could not find what you asked for")
-        #     node.blockchain.utxos_dict[t_input.recipient].remove(t_input)
-        # for t_output in t.transaction_outputs:
-        #     try:
-        #         node.utxos_dict[t_output.recipient].append(t_output)
-        #     except KeyError:
-        #         node.utxos_dict[t_output.recipient] = [t_output]
+        if not t.verify():
+            return
+        for t_input in t.transaction_inputs:
+            if not t_input in node.blockchain.utxos_dict[t_input.recipient]:
+                print("Could not find what you asked for")
+            node.blockchain.utxos_dict[t_input.recipient].remove(t_input)
+        for t_output in t.transaction_outputs:
+            try:
+                node.utxos_dict[t_output.recipient].append(t_output)
+            except KeyError:
+                node.utxos_dict[t_output.recipient] = [t_output]
         utxos_lock.release()
         print(f"Processing transaction {t}")
         node.add_transaction(t)
@@ -168,7 +162,7 @@ def receive_block():
     if not check_utxos(utxos_copy, block):
         print("Utxos are not good")
         return "Utxos don't match, not adding to blockchain", 400
-    # Add block to blockchain, this handles updating the utxos dict of the blockchain as well as our local utxos_list
+    # Add block to blockchain, this handles updating the utxos dict of the blockchain as well as our local utxos_dict
     node.add_block_to_blockchain(block)
     utxos_lock.release()
     # Process next transaction in pool
@@ -193,10 +187,12 @@ def all_nodes_here():
         my_wallet: Wallet = node.wallet
         if receiving_node["public_key"] == my_wallet.public_key:
             continue
-        utxos = node.utxos_list
+        utxos = node.utxos_dict
         t = create_transaction(my_wallet, receiving_node["public_key"], 100, utxos)
+        # TODO: perhaps this signing here is not needed as I sign the transaction
+        # inside create_transaction method
         t.sign_transaction(my_wallet.private_key)
-        node.utxos_list = utxos
+        node.utxos_dict = utxos
         thread = threading.Thread(target=node.broadcast_transaction, args=[t])
         thread.start()
         thread.join()
@@ -227,7 +223,7 @@ if __name__ == '__main__':
             }
         }
         node.ring = master_node
-        node.utxos_list = node.blockchain.chain[0].list_of_transactions[0].transaction_outputs
+        node.utxos_dict = {node.wallet.public_key : node.blockchain.chain[0].list_of_transactions[0].transaction_outputs}
     else:
         print("Creating participation node")
         data = {
@@ -245,9 +241,6 @@ if __name__ == '__main__':
         print("Blockchain received is valid")
         node.blockchain = blockchain
         # If there are transaction outputs for us, get them, otherwise the list is empty
-        try:
-            node.utxos_list = blockchain.utxos_dict[node.wallet.address]
-        except KeyError:
-            node.utxos_list = []
-
+        node.utxos_dict = node.blockchain.utxos_dict
+        
     app.run(host='0.0.0.0', port=port, threaded=True)

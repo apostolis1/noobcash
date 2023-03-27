@@ -19,7 +19,7 @@ class Node:
         # Local copy of utxos only for the given node, we use it to create intermediate transactions
         # We only care about our own utxos here because these are the ones we can modify
         # Be careful to update this list accordingly eg on transaction creation and block addition
-        self.utxos_list: list = []
+        self.utxos_dict: dict = {}
         self.mining = False
         self.transaction_pool = []
         self.event = Event()
@@ -80,10 +80,7 @@ class Node:
             print(f"About to add block with hash {block.current_hash} at position {len(self.blockchain.chain)}")
             self.blockchain.addBlock(block)
             # Update our utxos list accordingly
-            try:
-                self.utxos_list = self.blockchain.utxos_dict[self.wallet.address]
-            except KeyError:
-                self.utxos_list = []
+            self.utxos_dict = self.blockchain.utxos_dict
         return
     
     def mine_block(self):
