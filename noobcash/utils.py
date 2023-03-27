@@ -10,7 +10,6 @@ def create_transaction(sender_wallet: Wallet, receiver_address, amount, utxos_di
     #   address1: [utxo0, utxo1 ,...],
     #   address2: [utxo0, utxo1, ...],
     #   }
-
     previous_amount = sum(i.amount for i in utxos_dict[sender_wallet.public_key])
     # if amount > previous_amount:
     #     raise Exception()

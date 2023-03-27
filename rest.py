@@ -81,7 +81,13 @@ def create_transaction_endpoint():
         print("Transaction received is not valid, not adding it to pool")
         return "Failed", 400
     transaction_pool.append(t)
-    print(f"Added transaction to pool, pool length is {len(transaction_pool)}")
+    print(f"I sam inside create_transaction_endpoint() and I am appending transaction to pool with input amount: "
+          f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
+    print(f"I sam inside create_transaction_endpoint() and I am appending transaction to pool output_0 with "
+          f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
+    print(f"I sam inside create_transaction_endpoint() and I am appending transaction to pool output_1 with "
+          f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
+    # print(f"Added transaction to pool, pool length is {len(transaction_pool)}")
     for i in transaction_pool:
         print(f"Receiver address: \t {i.receiver_address}")
     pool_get_lock.release()
@@ -99,16 +105,28 @@ def process_transaction_from_pool():
             print("Pool is empty, returning")
             return
         t: Transaction = transaction_pool.pop(0)
-        print(f"Removing transaction from pool, new pool length is {len(transaction_pool)}")
+        print(f"I sam inside process_transaction_from_pool() and I am pooping transaction from pool with input amount: "
+              f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
+        print(f"I sam inside process_transaction_from_pool() and I am pooping transaction from pool with output_0 with "
+              f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
+        print(f"I sam inside process_transaction_from_pool() and I am pooping transaction from pool with output_1 with "
+              f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
+        # print(f"Removing transaction from pool, new pool length is {len(transaction_pool)}")
         pool_get_lock.release()
         utxos_lock.acquire()
-        print("Processing transaction ")
+        # print("Processing transaction ")
         # TODO:  this does not work as bootstrap node cannot find the t_input in node.utxos_dict
         # and thus it raises error
         if not t.verify():
             return
         # We don't check our own transactions, because we have already removed the utxos during create_transaction
         if not t.sender_address == node.wallet.address:
+            print(f"I sam inside process_transaction_from_pool and I am processing transaction with input amount: "
+                  f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
+            print(f"I sam inside process_transaction_from_pool and I am processing transaction with output_0 with "
+                  f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
+            print(f"I sam inside process_transaction_from_pool and I am processing transaction with output_1 with "
+                  f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
             for t_input in t.transaction_inputs:
                 if t_input not in node.utxos_dict[t_input.recipient]:
                     print(f"Cant find  input with id: {t_input.unique_id} and amount: {t_input.amount} in {[i.unique_id  for i in node.utxos_dict[t_input.recipient]]}")
@@ -176,7 +194,6 @@ def receive_block():
     return "Success", 200
 
 
-
 def all_nodes_here():
     time.sleep(2)
     existing_nodes = node.ring
@@ -189,8 +206,6 @@ def all_nodes_here():
         }
         requests.post(url=url, json=data)
     time.sleep(1)
-
-
     for receiving_node in existing_nodes.values():
         my_wallet: Wallet = node.wallet
         if receiving_node["public_key"] == my_wallet.public_key:
@@ -206,7 +221,13 @@ def all_nodes_here():
         thread = threading.Thread(target=node.broadcast_transaction, args=[t])
         thread.start()
         thread.join()
-        print(f"Successfully broadcasted transaction {t}")
+        # print(f"Successfully broadcasted transaction {t}")
+        print(f"I sam inside all_nodes_here() and I am processing transaction with input amount: "
+              f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
+        print(f"I sam inside all_nodes_here() and I am processing transaction with output_0 with "
+              f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
+        print(f"I sam inside all_nodes_here() and I am processing transaction with output_1 with "
+              f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
 
 
 if __name__ == '__main__':

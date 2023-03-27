@@ -65,6 +65,12 @@ class Blockchain:
 
     def add_transaction(self, t: Transaction) -> bool:
         # TODO: Check if this condition is correct, maybe checks are required in additional places
+        print(f"I sam inside node.blockchain.add_transaction() and I am processing transaction with input amount: "
+              f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
+        print(f"I sam inside node.blockchain.add_transaction() and I am processing transaction with output_0 with "
+              f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
+        print(f"I sam inside node.blockchain.add_transaction() and I am processing transaction with output_1 with "
+              f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
         if self.current_block is None or self.getLastBlock() == self.current_block:
             print("Creating a new current_block and adding transaction there")
             last_block = self.getLastBlock()
