@@ -118,24 +118,25 @@ def process_transaction_from_pool():
         # TODO:  this does not work as bootstrap node cannot find the t_input in node.utxos_dict
         # and thus it raises error
         if not t.verify():
+            utxos_lock.release()
             return
         # We don't check our own transactions, because we have already removed the utxos during create_transaction
-        if not t.sender_address == node.wallet.address:
-            print(f"I sam inside process_transaction_from_pool and I am processing transaction with input amount: "
-                  f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
-            print(f"I sam inside process_transaction_from_pool and I am processing transaction with output_0 with "
-                  f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
-            print(f"I sam inside process_transaction_from_pool and I am processing transaction with output_1 with "
-                  f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
-            for t_input in t.transaction_inputs:
-                if t_input not in node.utxos_dict[t_input.recipient]:
-                    print(f"Cant find  input with id: {t_input.unique_id} and amount: {t_input.amount} in {[i.unique_id  for i in node.utxos_dict[t_input.recipient]]}")
-                node.utxos_dict[t_input.recipient].remove(t_input)
-            for t_output in t.transaction_outputs:
-                try:
-                    node.utxos_dict[t_output.recipient].append(t_output)
-                except KeyError:
-                    node.utxos_dict[t_output.recipient] = [t_output]
+        # if not t.sender_address == node.wallet.address:
+        #     print(f"I sam inside process_transaction_from_pool and I am processing transaction with input amount: "
+        #           f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
+        #     print(f"I sam inside process_transaction_from_pool and I am processing transaction with output_0 with "
+        #           f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
+        #     print(f"I sam inside process_transaction_from_pool and I am processing transaction with output_1 with "
+        #           f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
+        #     for t_input in t.transaction_inputs:
+        #         if t_input not in node.utxos_dict[t_input.recipient]:
+        #             print(f"Cant find  input with id: {t_input.unique_id} and amount: {t_input.amount} in {[i.unique_id  for i in node.utxos_dict[t_input.recipient]]}")
+        #         node.utxos_dict[t_input.recipient].remove(t_input)
+        #     for t_output in t.transaction_outputs:
+        #         try:
+        #             node.utxos_dict[t_output.recipient].append(t_output)
+        #         except KeyError:
+        #             node.utxos_dict[t_output.recipient] = [t_output]
         # print(f"Processing transaction {t}")
         utxos_lock.release()
         node.add_transaction(t)
@@ -181,11 +182,11 @@ def receive_block():
     utxos_lock.acquire()
     utxos_copy = deepcopy(node.blockchain.utxos_dict)
     # Check the transactions in the block compared to the ones in the blockchain to see if we can add the block
-    if not check_utxos(utxos_copy, block):
-        print(f"Current blockchain has length {len(node.blockchain.chain)}")
-        print("Utxos are not good")
-        utxos_lock.release()
-        return "Utxos don't match, not adding to blockchain", 400
+    # if not check_utxos(utxos_copy, block):
+    #     print(f"Current blockchain has length {len(node.blockchain.chain)}")
+    #     print("Utxos are not good")
+    #     utxos_lock.release()
+    #     return "Utxos don't match, not adding to blockchain", 400
     # Add block to blockchain, this handles updating the utxos dict of the blockchain as well as our local utxos_dict
     node.add_block_to_blockchain(block)
     utxos_lock.release()
@@ -211,7 +212,7 @@ def all_nodes_here():
         if receiving_node["public_key"] == my_wallet.public_key:
             continue
         utxos_lock.acquire()
-        utxos = node.utxos_dict
+        utxos = node.my_utxos
         # print("Utxos before are:")
         # for i in utxos[node.wallet.address]:
         #     print(str(i))
@@ -222,20 +223,21 @@ def all_nodes_here():
         # for i in utxos[node.wallet.address]:
         #     print(str(i))
         t.sign_transaction(my_wallet.private_key)
-        node.utxos_dict = utxos
-        print(
-            f"Changed my utxos to {[str(i) for i in node.utxos_dict[node.wallet.address]]} inside all_nodes_here()")
-
-        print(f"I sam inside all_nodes_here() and I am processing transaction with input amount: "
-              f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
-        print(f"I sam inside all_nodes_here() and I am processing transaction with output_0 with "
-              f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
-        print(f"I sam inside all_nodes_here() and I am processing transaction with output_1 with "
-              f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
+        node.my_utxos = utxos
+        # print(
+        #     f"Changed my utxos to {[str(i) for i in node.utxos_dict[node.wallet.address]]} inside all_nodes_here()")
+        #
+        # print(f"I sam inside all_nodes_here() and I am processing transaction with input amount: "
+        #       f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
+        # print(f"I sam inside all_nodes_here() and I am processing transaction with output_0 with "
+        #       f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
+        # print(f"I sam inside all_nodes_here() and I am processing transaction with output_1 with "
+        #       f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
         utxos_lock.release()
         thread = threading.Thread(target=node.broadcast_transaction, args=[t])
         thread.start()
         thread.join()
+        time.sleep(5)
         # print(f"Successfully broadcasted transaction {t}")
 
 
@@ -263,7 +265,11 @@ if __name__ == '__main__':
             }
         }
         node.ring = master_node
-        node.utxos_dict = {node.wallet.public_key : deepcopy(node.blockchain.chain[0].list_of_transactions[0].transaction_outputs)}
+        # node.utxos_dict = {node.wallet.public_key : deepcopy(node.blockchain.chain[0].list_of_transactions[0].transaction_outputs)}
+        try:
+            node.my_utxos = deepcopy(node.blockchain.utxos_dict[node.wallet.address])
+        except KeyError:
+            node.my_utxos = []
     else:
         print("Creating participation node")
         data = {
@@ -281,6 +287,9 @@ if __name__ == '__main__':
         print("Blockchain received is valid")
         node.blockchain = blockchain
         # If there are transaction outputs for us, get them, otherwise the list is empty
-        node.utxos_dict = deepcopy(node.blockchain.utxos_dict)
+        try:
+            node.my_utxos = deepcopy(node.blockchain.utxos_dict[node.wallet.address])
+        except KeyError:
+            node.my_utxos = []
         
     app.run(host='0.0.0.0', port=port, threaded=True)

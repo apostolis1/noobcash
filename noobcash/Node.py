@@ -14,14 +14,15 @@ from threading import Thread, Event
 
 class Node:
     def __init__(self, blockchain=None):
-        self.blockchain = blockchain
+        self.blockchain: Blockchain = blockchain
         self.ring = {}
         self.wallet = Wallet()
         # Local copy of utxos only for the given node, we use it to create intermediate transactions
         # We only care about our own utxos here because these are the ones we can modify
         # Be careful to update this list accordingly eg on transaction creation and block addition
-        self.utxos_dict: dict = {}
+        self.my_utxos: list = []
         self.mining = False
+
         self.transaction_pool = []
         self.event = Event()
         self.event.clear()
@@ -81,8 +82,10 @@ class Node:
             print(f"About to add block with hash {block.current_hash} at position {len(self.blockchain.chain)}")
             self.blockchain.addBlock(block)
             # Update our utxos list accordingly
-            self.utxos_dict = deepcopy(self.blockchain.utxos_dict)
-            print(f"Changed my utxos to {[str(i) for i in self.utxos_dict[self.wallet.address]]} inside node.add_block_to_blockchain")
+            try:
+                self.my_utxos = deepcopy(self.blockchain.utxos_dict[self.wallet.address])
+            except KeyError:
+                self.my_utxos = []
         return
     
     def mine_block(self):
