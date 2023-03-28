@@ -67,7 +67,7 @@ class Node:
             # TODO: We probably need to resolve_conflicts here, careful with locks and events
             return
         # if block.validate_block(self.blockchain.difficulty) and self.blockchain.getLastBlock().current_hash == block.previousHash:
-        if block.validate_block(self.blockchain.difficulty):
+        if block.validate_block(self.blockchain.difficulty) and self.blockchain.can_block_be_added(block):
             print("Received a valid block, will check if I am mining already")
             if self.mining:
                 print("SET MINING TO FALSE")

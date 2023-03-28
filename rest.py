@@ -81,12 +81,12 @@ def create_transaction_endpoint():
         print("Transaction received is not valid, not adding it to pool")
         return "Failed", 400
     transaction_pool.append(t)
-    print(f"I sam inside create_transaction_endpoint() and I am appending transaction to pool with input amount: "
-          f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
-    print(f"I sam inside create_transaction_endpoint() and I am appending transaction to pool output_0 with "
-          f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
-    print(f"I sam inside create_transaction_endpoint() and I am appending transaction to pool output_1 with "
-          f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
+    # print(f"I sam inside create_transaction_endpoint() and I am appending transaction to pool with input amount: "
+    #       f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
+    # print(f"I sam inside create_transaction_endpoint() and I am appending transaction to pool output_0 with "
+    #       f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
+    # print(f"I sam inside create_transaction_endpoint() and I am appending transaction to pool output_1 with "
+    #       f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
     # print(f"Added transaction to pool, pool length is {len(transaction_pool)}")
     # for i in transaction_pool:
     #     print(f"Receiver address: \t {i.receiver_address}")
@@ -105,12 +105,12 @@ def process_transaction_from_pool():
             print("Pool is empty, returning")
             return
         t: Transaction = transaction_pool.pop(0)
-        print(f"I sam inside process_transaction_from_pool() and I am pooping transaction from pool with input amount: "
-              f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
-        print(f"I sam inside process_transaction_from_pool() and I am pooping transaction from pool with output_0 with "
-              f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
-        print(f"I sam inside process_transaction_from_pool() and I am pooping transaction from pool with output_1 with "
-              f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
+        # print(f"I sam inside process_transaction_from_pool() and I am pooping transaction from pool with input amount: "
+        #       f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
+        # print(f"I sam inside process_transaction_from_pool() and I am pooping transaction from pool with output_0 with "
+        #       f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
+        # print(f"I sam inside process_transaction_from_pool() and I am pooping transaction from pool with output_1 with "
+        #       f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
         # print(f"Removing transaction from pool, new pool length is {len(transaction_pool)}")
         pool_get_lock.release()
         utxos_lock.acquire()
@@ -180,7 +180,6 @@ def receive_block():
         raise Exception("None current hash received")
     print(f"Mining value: {node.mining}")
     utxos_lock.acquire()
-    utxos_copy = deepcopy(node.blockchain.utxos_dict)
     # Check the transactions in the block compared to the ones in the blockchain to see if we can add the block
     # if not check_utxos(utxos_copy, block):
     #     print(f"Current blockchain has length {len(node.blockchain.chain)}")
@@ -237,8 +236,8 @@ def all_nodes_here():
         thread = threading.Thread(target=node.broadcast_transaction, args=[t])
         thread.start()
         thread.join()
+        print(f"Successfully broadcasted transaction {t}")
         time.sleep(5)
-        # print(f"Successfully broadcasted transaction {t}")
 
 
 if __name__ == '__main__':

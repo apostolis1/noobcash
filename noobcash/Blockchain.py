@@ -64,6 +64,29 @@ class Blockchain:
         self.chain.append(newBlock)
         return
 
+    def can_block_be_added(self, b: Block):
+        previous_utxos = deepcopy(self.utxos_dict)
+        for k, v in previous_utxos.items():
+            print(k)
+            for i in v:
+                print(i)
+
+        for t in b.list_of_transactions:
+            for t_input in t.transaction_inputs:
+                try:
+                    previous_utxos[t_input.recipient].remove(t_input)
+                except Exception as e:
+                    print("BLOCK CANT BE ADDED")
+                    print(e)
+                    print(t_input)
+                    return False
+            for t_output in t.transaction_outputs:
+                try:
+                    previous_utxos[t_output.recipient].append(t_output)
+                except KeyError:
+                    previous_utxos[t_output.recipient] = [t_output]
+        return True
+
     def can_transaction_be_added(self, t: Transaction) -> bool:
         # Check to see if the transaction can be added to the current_block by making sure that the
         # inputs are indeed unspent
@@ -78,17 +101,17 @@ class Blockchain:
     def add_transaction(self, t: Transaction) -> bool:
         # Returns True if we need to start mining
         # TODO: Check if this condition is correct, maybe checks are required in additional places
-        print(f"I sam inside node.blockchain.add_transaction() and I am processing transaction with input amount: "
-              f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
-        print(f"I sam inside node.blockchain.add_transaction() and I am processing transaction with output_0 with "
-              f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
-        print(f"I sam inside node.blockchain.add_transaction() and I am processing transaction with output_1 with "
-              f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
+        # print(f"I sam inside node.blockchain.add_transaction() and I am processing transaction with input amount: "
+        #       f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
+        # print(f"I sam inside node.blockchain.add_transaction() and I am processing transaction with output_0 with "
+        #       f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
+        # print(f"I sam inside node.blockchain.add_transaction() and I am processing transaction with output_1 with "
+        #       f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
         if self.current_block is None or self.getLastBlock() == self.current_block:
             print("Creating a new current_block and adding transaction there")
             last_block = self.getLastBlock()
             new_block = Block(index=last_block.index + 1, previous_hash=last_block.current_hash, capacity=self.capacity)
-            self.current_block_utxos = self.utxos_dict
+            self.current_block_utxos = deepcopy(self.utxos_dict)
             # If the transaction is not valid for the given current_block state, return False without adding it
             if not self.can_transaction_be_added(t):
                 return False
