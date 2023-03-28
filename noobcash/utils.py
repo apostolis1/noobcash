@@ -7,10 +7,6 @@ from copy import deepcopy
 
 
 def create_transaction(sender_wallet: Wallet, receiver_address, amount, utxos_list: list):
-    # utxos_dict = {
-    #   address1: [utxo0, utxo1 ,...],
-    #   address2: [utxo0, utxo1, ...],
-    #   }
     previous_amount = sum(i.amount for i in utxos_list)
     # if amount > previous_amount:
     #     raise Exception()
