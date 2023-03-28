@@ -18,7 +18,7 @@ class TransactionOutput:
         return hash_object.hexdigest()
 
     def __str__(self):
-        return f"Transaction Id: {self.transaction_id} Recipient:{self.recipient} Amount: {self.amount} UniqueId: {self.unique_id}"
+        return f"Transaction Id: {self.transaction_id} Recipient:{self.recipient[-5:]} Amount: {self.amount} UniqueId: {self.unique_id}"
 
     def to_dict(self):
         res = {

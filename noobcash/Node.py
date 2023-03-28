@@ -82,6 +82,7 @@ class Node:
             self.blockchain.addBlock(block)
             # Update our utxos list accordingly
             self.utxos_dict = deepcopy(self.blockchain.utxos_dict)
+            print(f"Changed my utxos to {[str(i) for i in self.utxos_dict[self.wallet.address]]} inside node.add_block_to_blockchain")
         return
     
     def mine_block(self):

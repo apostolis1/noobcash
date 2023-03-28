@@ -74,9 +74,9 @@ def create_transaction_endpoint():
     transaction_dict = request.json
     # print(transaction_dict)
     pool_get_lock.acquire()
-    print("Received transaction")
+    # print("Received transaction")
     t = transaction_from_dict(transaction_dict)
-    print(f"Receiver address: \t {t.receiver_address}")
+    # print(f"Receiver address: \t {t.receiver_address}")
     if not t.verify():
         print("Transaction received is not valid, not adding it to pool")
         return "Failed", 400
@@ -88,8 +88,8 @@ def create_transaction_endpoint():
     print(f"I sam inside create_transaction_endpoint() and I am appending transaction to pool output_1 with "
           f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
     # print(f"Added transaction to pool, pool length is {len(transaction_pool)}")
-    for i in transaction_pool:
-        print(f"Receiver address: \t {i.receiver_address}")
+    # for i in transaction_pool:
+    #     print(f"Receiver address: \t {i.receiver_address}")
     pool_get_lock.release()
     # start new thread that handles the transactions from the pool
     threading.Thread(target=process_transaction_from_pool).start()
@@ -212,22 +212,31 @@ def all_nodes_here():
             continue
         utxos_lock.acquire()
         utxos = node.utxos_dict
+        # print("Utxos before are:")
+        # for i in utxos[node.wallet.address]:
+        #     print(str(i))
         t = create_transaction(my_wallet, receiving_node["public_key"], 100, utxos)
         # TODO: perhaps this signing here is not needed as I sign the transaction
         # inside create_transaction method
+        # print("Utxos after are:")
+        # for i in utxos[node.wallet.address]:
+        #     print(str(i))
         t.sign_transaction(my_wallet.private_key)
         node.utxos_dict = utxos
-        utxos_lock.release()
-        thread = threading.Thread(target=node.broadcast_transaction, args=[t])
-        thread.start()
-        thread.join()
-        # print(f"Successfully broadcasted transaction {t}")
+        print(
+            f"Changed my utxos to {[str(i) for i in node.utxos_dict[node.wallet.address]]} inside all_nodes_here()")
+
         print(f"I sam inside all_nodes_here() and I am processing transaction with input amount: "
               f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
         print(f"I sam inside all_nodes_here() and I am processing transaction with output_0 with "
               f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
         print(f"I sam inside all_nodes_here() and I am processing transaction with output_1 with "
               f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
+        utxos_lock.release()
+        thread = threading.Thread(target=node.broadcast_transaction, args=[t])
+        thread.start()
+        thread.join()
+        # print(f"Successfully broadcasted transaction {t}")
 
 
 if __name__ == '__main__':
