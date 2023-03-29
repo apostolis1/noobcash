@@ -20,6 +20,7 @@ transaction_pool = node.transaction_pool
 CORS(app)
 pool_get_lock = threading.Lock()
 utxos_lock = threading.Lock()
+blockchain_lock = threading.Lock()
 
 
 # Route registration
@@ -160,6 +161,7 @@ def receive_block():
         raise Exception("None current hash received")
     print(f"Mining value: {node.mining}")
     utxos_lock.acquire()
+    blockchain_lock.acquire()
     # Check the transactions in the block compared to the ones in the blockchain to see if we can add the block
     # if not check_utxos(utxos_copy, block):
     #     print(f"Current blockchain has length {len(node.blockchain.chain)}")
@@ -169,10 +171,15 @@ def receive_block():
     # Add block to blockchain, this handles updating the utxos dict of the blockchain as well as our local utxos_dict
     node.add_block_to_blockchain(block)
     utxos_lock.release()
+    blockchain_lock.release()
     # Process next transaction in pool
     threading.Thread(target=process_transaction_from_pool).start()
     return "Success", 200
 
+
+@app.route('/transaction/new', methods=["POST"])
+def create_transaction_cli():
+    ...
 
 def all_nodes_here():
     time.sleep(2)

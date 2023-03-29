@@ -65,6 +65,7 @@ class Node:
     def add_block_to_blockchain(self, block: Block):
         if block.previousHash != self.blockchain.getLastBlock().current_hash:
             print("Block can't be placed at the end of blockchain")
+            self.resolve_conflicts()
             # TODO: We probably need to resolve_conflicts here, careful with locks and events
             return
         # if block.validate_block(self.blockchain.difficulty) and self.blockchain.getLastBlock().current_hash == block.previousHash:
