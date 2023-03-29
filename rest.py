@@ -80,6 +80,7 @@ def create_transaction_endpoint():
     # print(f"Receiver address: \t {t.receiver_address}")
     if not t.verify():
         print("Transaction received is not valid, not adding it to pool")
+        pool_get_lock.release()
         return "Failed", 400
     transaction_pool.append(t)
     # for i in transaction_pool:
@@ -140,7 +141,7 @@ def get_utxos():
     for k in node.blockchain.utxos_dict.keys():
         res[k] = [i.to_dict() for i in node.blockchain.utxos_dict[k]]
     print("Got utxos from blockchain, returning")
-    return res, 200
+    return jsonify(res), 200
 
 
 @app.route(rule="/transaction_pool")
@@ -177,9 +178,29 @@ def receive_block():
     return "Success", 200
 
 
-@app.route('/transaction/new', methods=["POST"])
+@app.route('/transactions/new', methods=["POST"])
 def create_transaction_cli():
-    ...
+    """
+    For compatibility with the cli we want an endpoint that we can use to create a transaction given some basic params,
+    the receiver and the amount. We can't use directly /transactions/create because that one expects a valid transaction
+    dict as input, which requires Node information that the cli doesn't have. So we use this endpoint as an intermediate
+    endpoint which handles the Transaction object creation and broadcasts it.
+    """
+    receiver_address = request.json['receiver_address']
+    amount = request.json['amount']
+    my_wallet: Wallet = node.wallet
+    utxos_lock.acquire()
+    utxos = node.my_utxos
+    t = create_transaction(my_wallet, receiver_address, amount, utxos)
+    t.sign_transaction(my_wallet.private_key)
+    node.my_utxos = utxos
+    utxos_lock.release()
+    thread = threading.Thread(target=node.broadcast_transaction, args=[t])
+    thread.start()
+    thread.join()
+    return "Success", 200
+
+
 
 def all_nodes_here():
     time.sleep(2)
@@ -199,18 +220,10 @@ def all_nodes_here():
             continue
         utxos_lock.acquire()
         utxos = node.my_utxos
-        # print("Utxos before are:")
-        # for i in utxos[node.wallet.address]:
-        #     print(str(i))
         t = create_transaction(my_wallet, receiving_node["public_key"], 100, utxos)
         # TODO: perhaps this signing here is not needed as I sign the transaction
-        # inside create_transaction method
-        # print("Utxos after are:")
-        # for i in utxos[node.wallet.address]:
-        #     print(str(i))
         t.sign_transaction(my_wallet.private_key)
         node.my_utxos = utxos
-        # print(f"Changed my utxos to {[str(i) for i in node.utxos_dict[node.wallet.address]]} inside all_nodes_here()")
         utxos_lock.release()
         thread = threading.Thread(target=node.broadcast_transaction, args=[t])
         thread.start()

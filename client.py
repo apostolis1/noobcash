@@ -3,7 +3,7 @@ import requests
 MASTER_IP = "127.0.0.1:5000"
 
 
-def get_ring():
+def get_ring() -> dict:
     url = f"http://{MASTER_IP}/nodes/all"
     res = requests.get(url=url)
     return res.json()
@@ -11,11 +11,42 @@ def get_ring():
 
 def view_transactions(args):
     print("Transactions are...")
+
     return
 
 
 def create_transaction(args):
     print("Create transaction")
+    print(args)
+    ring = get_ring()
+    sender = args.sender
+    receiver = args.receiver
+    amount = args.amount
+    try:
+        base_url = ring[sender]['url']
+    except KeyError:
+        print(f"Not a valid sender, valid options are {[i for i in ring.keys()]}")
+        return
+    try:
+        receiver_address = ring[receiver]['public_key']
+    except KeyError:
+        print(f"Not a valid receiver, valid options are {[i for i in ring.keys()]}")
+        return
+    url = f"http://{base_url}/transactions/new"
+    data = {
+        'receiver_address': receiver_address,
+        'amount': amount
+    }
+    res = requests.post(url=url, json=data)
+    if res.status_code == 200:
+        print("Successfully created transaction")
+    else:
+        print(f"Something went wrong, got status code {res.status_code}")
+    return
+
+
+def balance(args):
+    print("Showing balance")
 
 
 if __name__ == '__main__':
@@ -33,7 +64,8 @@ if __name__ == '__main__':
     parser_view = subparsers.add_parser('view', help='view transactions')
     parser_view.set_defaults(func=view_transactions)
 
+    parser_balance = subparsers.add_parser('balance', help='view transactions')
+    parser_balance.set_defaults(func=balance)
+
     args = parser.parse_args()
     args.func(args)
-    ring = get_ring()
-
