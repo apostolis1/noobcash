@@ -16,7 +16,7 @@ from copy import deepcopy
 app = Flask(__name__)
 app.config.from_object('config.Config')
 node: Node = Node()
-transaction_pool = []
+transaction_pool = node.transaction_pool
 CORS(app)
 pool_get_lock = threading.Lock()
 utxos_lock = threading.Lock()
@@ -81,13 +81,6 @@ def create_transaction_endpoint():
         print("Transaction received is not valid, not adding it to pool")
         return "Failed", 400
     transaction_pool.append(t)
-    # print(f"I sam inside create_transaction_endpoint() and I am appending transaction to pool with input amount: "
-    #       f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
-    # print(f"I sam inside create_transaction_endpoint() and I am appending transaction to pool output_0 with "
-    #       f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
-    # print(f"I sam inside create_transaction_endpoint() and I am appending transaction to pool output_1 with "
-    #       f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
-    # print(f"Added transaction to pool, pool length is {len(transaction_pool)}")
     # for i in transaction_pool:
     #     print(f"Receiver address: \t {i.receiver_address}")
     pool_get_lock.release()
@@ -105,13 +98,6 @@ def process_transaction_from_pool():
             print("Pool is empty, returning")
             return
         t: Transaction = transaction_pool.pop(0)
-        # print(f"I sam inside process_transaction_from_pool() and I am pooping transaction from pool with input amount: "
-        #       f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
-        # print(f"I sam inside process_transaction_from_pool() and I am pooping transaction from pool with output_0 with "
-        #       f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
-        # print(f"I sam inside process_transaction_from_pool() and I am pooping transaction from pool with output_1 with "
-        #       f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
-        # print(f"Removing transaction from pool, new pool length is {len(transaction_pool)}")
         pool_get_lock.release()
         utxos_lock.acquire()
         # print("Processing transaction ")
@@ -122,12 +108,6 @@ def process_transaction_from_pool():
             return
         # We don't check our own transactions, because we have already removed the utxos during create_transaction
         # if not t.sender_address == node.wallet.address:
-        #     print(f"I sam inside process_transaction_from_pool and I am processing transaction with input amount: "
-        #           f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
-        #     print(f"I sam inside process_transaction_from_pool and I am processing transaction with output_0 with "
-        #           f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
-        #     print(f"I sam inside process_transaction_from_pool and I am processing transaction with output_1 with "
-        #           f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
         #     for t_input in t.transaction_inputs:
         #         if t_input not in node.utxos_dict[t_input.recipient]:
         #             print(f"Cant find  input with id: {t_input.unique_id} and amount: {t_input.amount} in {[i.unique_id  for i in node.utxos_dict[t_input.recipient]]}")
@@ -223,21 +203,13 @@ def all_nodes_here():
         #     print(str(i))
         t.sign_transaction(my_wallet.private_key)
         node.my_utxos = utxos
-        # print(
-        #     f"Changed my utxos to {[str(i) for i in node.utxos_dict[node.wallet.address]]} inside all_nodes_here()")
-        #
-        # print(f"I sam inside all_nodes_here() and I am processing transaction with input amount: "
-        #       f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
-        # print(f"I sam inside all_nodes_here() and I am processing transaction with output_0 with "
-        #       f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
-        # print(f"I sam inside all_nodes_here() and I am processing transaction with output_1 with "
-        #       f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
+        # print(f"Changed my utxos to {[str(i) for i in node.utxos_dict[node.wallet.address]]} inside all_nodes_here()")
         utxos_lock.release()
         thread = threading.Thread(target=node.broadcast_transaction, args=[t])
         thread.start()
         thread.join()
         print(f"Successfully broadcasted transaction {t}")
-        time.sleep(5)
+        time.sleep(3)
 
 
 @app.route("/blockchain_length/")
@@ -246,6 +218,38 @@ def get_blockchain_length():
     # Used in resolve_conflicts
     # TODO: Check if chain lock is needed here
     return {"length": (len(node.blockchain.chain))}, 200
+
+
+@app.route("/resolve_conflicts/")
+def rest_resolve_conflicts():
+    node.resolve_conflicts()
+    return "Success", 200
+
+
+@app.route("/blockchain_differences/", methods=["POST"])
+def get_blockchain_differences():
+    sender_hashed = request.json["hashes"]
+    print("Received hashes")
+    print(sender_hashed)
+    start_idx = None
+    for idx, block_hash in enumerate(sender_hashed):
+        if node.blockchain.chain[idx].current_hash != block_hash:
+            start_idx = idx
+            break
+    if start_idx is None:
+        start_idx = len(node.blockchain.chain)
+    blocks_to_send = node.blockchain.chain[start_idx:]
+    print(f"Difference found in position {start_idx}, will send {len(blocks_to_send)} blocks")
+    blocks_dict = [i.to_dict() for i in blocks_to_send]
+    # TODO: I need to send also UTXOs, current_block and transaction_pool
+    transaction_pool_dict = [i.to_dict() for i in transaction_pool]
+    return {
+        "blocks": blocks_dict,
+        "conflict_idx": start_idx,
+        "transaction_pool": transaction_pool_dict,
+        "blockchain_utxos": {k: [i.to_dict() for i in v] for k, v in node.blockchain.utxos_dict.items()},
+        "current_block_utxos": {k: [i.to_dict() for i in v] for k, v in node.blockchain.current_block_utxos.items()}
+    }, 200
 
 
 if __name__ == '__main__':

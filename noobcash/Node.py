@@ -1,3 +1,5 @@
+import sys
+
 from noobcash.Wallet import Wallet
 from noobcash.Block import Block
 from noobcash.Blockchain import Blockchain
@@ -22,7 +24,6 @@ class Node:
         # Be careful to update this list accordingly eg on transaction creation and block addition
         self.my_utxos: list = []
         self.mining = False
-
         self.transaction_pool = []
         self.event = Event()
         self.event.clear()
@@ -109,4 +110,53 @@ class Node:
             # transaction added filled the block, so I start mining
             child_process = Thread(target=self.mine_block)
             child_process.start()
+        return
+
+    def resolve_conflicts(self):
+        # Get blockchain_length from all other nodes
+        # Find the biggest chain
+        #
+        print("Resolving conflicts ...")
+        lengths = {}
+        for k, n in self.ring.items():
+            if n['public_key'] == self.wallet.public_key:
+                continue
+            for _ in range(5):
+                try:
+                    url = f"http://{n['url']}/blockchain_length"
+                    res = requests.get(url)
+                    lengths[int(k.replace("id_", ""))] = res.json()['length']
+                    break
+                except Exception as e:
+                    print("Got exception")
+                    print(e)
+                    time.sleep(1)
+        print(f"Got lengths: {lengths}")
+        # Find biggest chain
+        biggest_length = 1
+        biggest_node_id = sys.maxsize
+        for k,v in lengths.items():
+            if v > biggest_length or (v == biggest_length and k < biggest_node_id):
+                biggest_length = v
+                biggest_node_id = k
+        print(f"I will ask node id {biggest_node_id} with length {biggest_length} for the chain")
+        # We don't need the whole chain, only the part where our chains differ
+        # Send only hashes of block to the node with the biggest chain
+        hashes_to_send = {"hashes": [i.current_hash for i in self.blockchain.chain]}
+        url_base = self.ring[f"id_{biggest_node_id}"]['url']
+        url = f"http://{url_base}/blockchain_differences"
+        res = requests.post(url, json=hashes_to_send)
+        res_json = res.json()
+        new_chain = self.blockchain.chain[:res_json["conflict_idx"]]
+        new_chain.extend(res_json["blocks"])
+        self.blockchain.chain = new_chain
+        # TODO: need to check how to call pool and utxo locks
+        self.transaction_pool = [transaction_from_dict(i) for i in res_json["transaction_pool"]]
+        self.blockchain.utxos_dict = {k: [transaction_output_from_dict(i) for i in v] for k,v in res_json["blockchain_utxos"].items()}
+        self.blockchain.current_block_utxos = {k: [transaction_output_from_dict(i) for i in v] for k,v in res_json["current_block_utxos"].items()}
+
+        print(self.blockchain.current_block_utxos)
+        # self.blockchain.current_block_utxos = [transaction_output_from_dict(i) for i in res_json["current_block_utxos"]]
+        # print(res_json)
+        print("Resolve conflicts finished")
         return
