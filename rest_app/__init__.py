@@ -32,7 +32,7 @@ def create_app(port, is_first=False):
             node.blockchain = blockchain
             utxos_dict = create_utxos_dict_from_transaction_list(blockchain.get_unspent_transaction_outputs())
             master_node = {
-                "id_0": {
+                "id0": {
                     "url": f"127.0.0.1:{port}",
                     "public_key": node.wallet.public_key
                 }

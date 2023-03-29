@@ -32,7 +32,7 @@ def register_node():
         print("Existing nodes is empty")
     # Assign id to node
     new_node_id = len(existing_nodes)
-    existing_nodes[f"id_{new_node_id}"] = {
+    existing_nodes[f"id{new_node_id}"] = {
         "url": f"{ip_addr}:{port}",
         "public_key": public_key
     }
@@ -47,7 +47,7 @@ def register_node():
         print("All nodes are here, sending information to them")
         # Create new thread to notify the nodes of the network info
         threading.Thread(target=all_nodes_here, args=[existing_nodes, node]).start()
-    return jsonify({f"id_{new_node_id}": f"{ip_addr}:{port}"}), 200
+    return jsonify({f"id{new_node_id}": f"{ip_addr}:{port}"}), 200
 
 
 def all_nodes_here(existing_nodes: dict, node: Node):

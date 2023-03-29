@@ -54,7 +54,7 @@ def register_node():
     print(f"Received registration request from ip {ip_addr} at port {port} with public_key {public_key}")
     existing_nodes = node.ring
     new_node_id = len(existing_nodes)
-    existing_nodes[f"id_{new_node_id}"] = {
+    existing_nodes[f"id{new_node_id}"] = {
         "url": f"{ip_addr}:{port}",
         "public_key": public_key
     }
@@ -65,7 +65,7 @@ def register_node():
         print("All nodes are here, sending information to them")
         # Create new thread to notify the nodes of the network info
         threading.Thread(target=all_nodes_here, ).start()
-    return jsonify({f"id_{new_node_id}": f"{ip_addr}:{port}"}), 200
+    return jsonify({f"id{new_node_id}": f"{ip_addr}:{port}"}), 200
 
 
 @app.route(rule="/transactions/create", methods=['POST'])
@@ -162,7 +162,10 @@ def receive_block():
         raise Exception("None current hash received")
     print(f"Mining value: {node.mining}")
     utxos_lock.acquire()
+    print("Utxos_lock acquired")
     blockchain_lock.acquire()
+    print("Blockchain lock acquired")
+
     # Check the transactions in the block compared to the ones in the blockchain to see if we can add the block
     # if not check_utxos(utxos_copy, block):
     #     print(f"Current blockchain has length {len(node.blockchain.chain)}")
@@ -172,7 +175,10 @@ def receive_block():
     # Add block to blockchain, this handles updating the utxos dict of the blockchain as well as our local utxos_dict
     node.add_block_to_blockchain(block)
     utxos_lock.release()
+    print("Utxos lock released")
     blockchain_lock.release()
+    print("Blockchain lock released")
+
     # Process next transaction in pool
     threading.Thread(target=process_transaction_from_pool).start()
     return "Success", 200
@@ -191,7 +197,11 @@ def create_transaction_cli():
     my_wallet: Wallet = node.wallet
     utxos_lock.acquire()
     utxos = node.my_utxos
+
     t = create_transaction(my_wallet, receiver_address, amount, utxos)
+    if t is None:
+        utxos_lock.release()
+        return "Failed", 400
     t.sign_transaction(my_wallet.private_key)
     node.my_utxos = utxos
     utxos_lock.release()
@@ -221,6 +231,9 @@ def all_nodes_here():
         utxos_lock.acquire()
         utxos = node.my_utxos
         t = create_transaction(my_wallet, receiving_node["public_key"], 100, utxos)
+        if t is None:
+
+            print("Something went wrong")
         # TODO: perhaps this signing here is not needed as I sign the transaction
         t.sign_transaction(my_wallet.private_key)
         node.my_utxos = utxos
@@ -290,7 +303,7 @@ if __name__ == '__main__':
         blockchain.GenesisBlock(node.wallet.public_key)
         node.blockchain = blockchain
         master_node = {
-            "id_0": {
+            "id0": {
                 "url": f"127.0.0.1:{port}",
                 "public_key": node.wallet.public_key
             }

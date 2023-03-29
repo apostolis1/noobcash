@@ -126,7 +126,7 @@ class Node:
                 try:
                     url = f"http://{n['url']}/blockchain_length"
                     res = requests.get(url)
-                    lengths[int(k.replace("id_", ""))] = res.json()['length']
+                    lengths[int(k.replace("id", ""))] = res.json()['length']
                     break
                 except Exception as e:
                     print("Got exception")
@@ -144,7 +144,7 @@ class Node:
         # We don't need the whole chain, only the part where our chains differ
         # Send only hashes of block to the node with the biggest chain
         hashes_to_send = {"hashes": [i.current_hash for i in self.blockchain.chain]}
-        url_base = self.ring[f"id_{biggest_node_id}"]['url']
+        url_base = self.ring[f"id{biggest_node_id}"]['url']
         url = f"http://{url_base}/blockchain_differences"
         res = requests.post(url, json=hashes_to_send)
         res_json = res.json()
