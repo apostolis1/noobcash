@@ -1,6 +1,8 @@
 from time import time
 from Crypto.Hash import SHA256
 import random
+from typing import List
+from noobcash.Transaction import Transaction
 from threading import Event
 
 class Block:
@@ -15,7 +17,7 @@ class Block:
 			self.timestamp = time()
 		self.nonce = nonce
 		self.current_hash = current_hash
-		self.list_of_transactions = list_of_transactions
+		self.list_of_transactions: List[Transaction] = list_of_transactions
 		self.capacity = capacity  # pos mporo na paro tin parametro capacity apto config.py?
 
 	def is_full(self):
@@ -38,15 +40,17 @@ class Block:
 		hash_object = SHA256.new(data=value_to_hash.encode())
 		return hash_object.hexdigest()
 	
-	def get_nonce(self, difficulty):
+	def get_nonce(self, difficulty, event):
 		# try random values until block is valid
 		# to compute nonce two possible alternatives
 		# 1) start from random number and +1
 		# 2) start from 0 and for every iteration test a random number 
 		nonce_attempt = random.random()
 		while not self.my_hash(nonce_attempt).startswith('0' * difficulty):
+			if event.is_set():
+				print("Someone stopped me, will stop mining...")
+				raise Exception("Stopped mining")
 			nonce_attempt += 1
-
 		self.nonce = nonce_attempt
 		self.current_hash = self.my_hash(self.nonce)
 		return

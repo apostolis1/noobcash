@@ -4,10 +4,11 @@ from noobcash.Block import Block
 import time
 from noobcash.Transaction import Transaction
 from noobcash.TransactionOutput import TransactionOutput
-
+from copy import deepcopy
+from typing import List
 
 class Blockchain:
-    def __init__(self, nodes, chain=None, capacity=None, difficulty=None) -> None:
+    def __init__(self, nodes, chain=None, capacity=None, difficulty=None, utxos_dict=None) -> None:
         if chain is None:
             chain = []
         self.chain: list = chain
@@ -16,6 +17,14 @@ class Blockchain:
         self.difficulty = difficulty
         # Keep track of new block, has to be mined and verified before being added to the blockchain
         self.current_block = None
+        # Keep track of the valid utxos for each node, this could also be derived from traversing the whole chain
+        # However this is slow and should only be done when absolutely necessary, so update them each time a block is
+        # added
+        self.current_block_utxos = {}
+        if utxos_dict is None:
+            self.utxos_dict = {}
+        else:
+            self.utxos_dict = utxos_dict
 
     def GenesisBlock(self, bootstrap_address):
         genesis = Block(index=0, previous_hash='1', nonce=0, capacity=self.capacity)
@@ -25,25 +34,110 @@ class Blockchain:
         genesis.add_transaction(genesis_transaction)
         genesis.current_hash = genesis.my_hash(nonce = 0)
         self.chain.append(genesis)
+        # Update the utxos_dict
+        self.utxos_dict[bootstrap_address] = deepcopy(genesis_transaction.transaction_outputs)
         return
 
     def getLastBlock(self) -> Block:
         return self.chain[len(self.chain) - 1]
 
-    def addBlock(self, newBlock : Block):
+    def addBlock(self, newBlock: Block):
+        # When adding a block to the chain we also want to update the utxos of the blockchain
+        # This assumes that we already checked that the transactions of the block we are adding
+        # are valid, meaning checking the utxos of the blockchain
+        # Update transactions
+        for transaction in newBlock.list_of_transactions:
+            for t_input in transaction.transaction_inputs:
+                try:
+                    self.utxos_dict[t_input.recipient].remove(t_input)
+                except Exception as e:
+                    print("Cant find it")
+                    print(e)
+                    raise e
+            for t_output in transaction.transaction_outputs:
+                print(f"Adding output {t_output.unique_id} to recipient {t_output.recipient[-4:]}")
+                try:
+                    self.utxos_dict[t_output.recipient].append(t_output)
+                except KeyError:
+                    self.utxos_dict[t_output.recipient] = [t_output]
+        # Finally add the block to the chain
         self.chain.append(newBlock)
         return
 
+    def can_block_be_added(self, b: Block):
+        previous_utxos = deepcopy(self.utxos_dict)
+        for k, v in previous_utxos.items():
+            print(k)
+            for i in v:
+                print(i)
+
+        for t in b.list_of_transactions:
+            for t_input in t.transaction_inputs:
+                try:
+                    previous_utxos[t_input.recipient].remove(t_input)
+                except Exception as e:
+                    print("BLOCK CANT BE ADDED")
+                    print(e)
+                    print(t_input)
+                    return False
+            for t_output in t.transaction_outputs:
+                try:
+                    previous_utxos[t_output.recipient].append(t_output)
+                except KeyError:
+                    previous_utxos[t_output.recipient] = [t_output]
+        return True
+
+    def can_transaction_be_added(self, t: Transaction) -> bool:
+        # Check to see if the transaction can be added to the current_block by making sure that the
+        # inputs are indeed unspent
+        for t_input in t.transaction_inputs:
+            try:
+                if t_input not in self.current_block_utxos[t_input.recipient]:
+                    return False
+            except KeyError:
+                return False
+        return True
+
     def add_transaction(self, t: Transaction) -> bool:
+        # Returns True if we need to start mining
         # TODO: Check if this condition is correct, maybe checks are required in additional places
+        # print(f"I sam inside node.blockchain.add_transaction() and I am processing transaction with input amount: "
+        #       f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
+        # print(f"I sam inside node.blockchain.add_transaction() and I am processing transaction with output_0 with "
+        #       f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
+        # print(f"I sam inside node.blockchain.add_transaction() and I am processing transaction with output_1 with "
+        #       f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
         if self.current_block is None or self.getLastBlock() == self.current_block:
             print("Creating a new current_block and adding transaction there")
             last_block = self.getLastBlock()
             new_block = Block(index=last_block.index + 1, previous_hash=last_block.current_hash, capacity=self.capacity)
+            self.current_block_utxos = deepcopy(self.utxos_dict)
+            # If the transaction is not valid for the given current_block state, return False without adding it
+            if not self.can_transaction_be_added(t):
+                return False
             new_block.add_transaction(t)
+            # Update the current_block_utxos
+            for t_input in t.transaction_inputs:
+                self.current_block_utxos[t_input.recipient].remove(t_input)
+            for t_output in t.transaction_outputs:
+                try:
+                    self.current_block_utxos[t_output.recipient].append(t_output)
+                except KeyError:
+                    self.current_block_utxos[t_output.recipient] = [t_output]
             self.current_block = new_block
         else:
+            # If the transaction is not valid for the given current_block state, return False without adding it
+            if not self.can_transaction_be_added(t):
+                return False
             self.current_block.add_transaction(t)
+            # Update the current_block_utxos
+            for t_input in t.transaction_inputs:
+                self.current_block_utxos[t_input.recipient].remove(t_input)
+            for t_output in t.transaction_outputs:
+                try:
+                    self.current_block_utxos[t_output.recipient].append(t_output)
+                except KeyError:
+                    self.current_block_utxos[t_output.recipient] = [t_output]
         if self.current_block.is_full():
             #last_block.get_nonce(difficulty=self.difficulty)
             return True
@@ -64,7 +158,10 @@ class Blockchain:
             "chain": chain_list,
             "nodes": self.nodes,
             "capacity": self.capacity,
-            "difficulty": self.difficulty
+            "difficulty": self.difficulty,
+            "utxos_dict": {
+                k: [i.to_dict() for i in v] for k, v in self.utxos_dict.items()
+            }
         }
         return res
 

@@ -3,6 +3,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
 # from Crypto.Cipher import PKCS1_v1_5
 from noobcash.TransactionOutput import TransactionOutput
+from typing import List
 
 
 class Transaction:
@@ -17,17 +18,8 @@ class Transaction:
         self.amount = value
         self.signature = signature
         self.transaction_id = transaction_id
-        self.transaction_inputs = transaction_inputs
-        self.transaction_outputs = transaction_outputs
-        # self.sender_address: To public key του wallet από το οποίο προέρχονται τα χρήματα
-        # self.receiver_address: To public key του wallet στο οποίο θα καταλήξουν τα χρήματα
-        # self.amount: το ποσό που θα μεταφερθεί
-        # self.transaction_id: το hash του transaction
-        # self.transaction_inputs: λίστα από Transaction Input
-        # self.transaction_outputs: λίστα από Transaction Output
-        # Transaction Output = (unique id, id transaction, recipient, amount)
-        # unique_id = node_id +
-        # selfSignature
+        self.transaction_inputs: List[TransactionOutput] = transaction_inputs
+        self.transaction_outputs: List[TransactionOutput] = transaction_outputs
 
     def to_dict(self):
         if self.signature is None:
@@ -59,7 +51,6 @@ class Transaction:
         rsa_key = RSA.importKey(private_key)
         signature = pkcs1_15.new(rsa_key).sign(transaction_hash)
         self.signature = signature
-        # print("Changed signature...")
         return
 
     def verify(self):
@@ -67,10 +58,11 @@ class Transaction:
         transaction_hash = self.calculate_hash()
         try:
             pkcs1_15.new(public_key).verify(transaction_hash, self.signature)
-            print("The signature is valid.")
+            # print("The signature is valid.")
         except (ValueError, TypeError):
-            print("The signature is NOT valid.")
-        return
+            # print("The signature is NOT valid.")
+            return False
+        return True
 
     @staticmethod
     def find_transaction_inputs_for_amount(list_of_utxos, amount):
@@ -91,7 +83,7 @@ class Transaction:
     def create_transaction_outputs(self, sender_amount_before):
         recipient_output = TransactionOutput(self.transaction_id, self.receiver_address, self.amount)
         sender_output = TransactionOutput(self.transaction_id, self.sender_address, sender_amount_before - self.amount)
-        return [recipient_output, sender_output]
+        return [sender_output, recipient_output]
 
     def __eq__(self, other):
         if not isinstance(other, Transaction):

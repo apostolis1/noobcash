@@ -13,12 +13,12 @@ class TransactionOutput:
             self.unique_id = self.get_unique_id()
 
     def get_unique_id(self):
-        value_to_hash = self.transaction_id + self.recipient + str(self.amount) + str(time())
+        value_to_hash = self.transaction_id + self.recipient + str(self.amount)
         hash_object = SHA256.new(data=value_to_hash.encode())
         return hash_object.hexdigest()
 
     def __str__(self):
-        return f"Transaction Id: {self.transaction_id} Recipient:{self.recipient} Amount: {self.amount} UniqueId: {self.unique_id}"
+        return f"Transaction Id: {self.transaction_id} Recipient:{self.recipient[-5:]} Amount: {self.amount} UniqueId: {self.unique_id}"
 
     def to_dict(self):
         res = {
