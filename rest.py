@@ -200,8 +200,9 @@ def create_transaction_cli():
 
     t = create_transaction(my_wallet, receiver_address, amount, utxos)
     if t is None:
+        print("Not enough money, transaction is None")
         utxos_lock.release()
-        return "Failed", 400
+        return "Failed", 402
     t.sign_transaction(my_wallet.private_key)
     node.my_utxos = utxos
     utxos_lock.release()
@@ -211,6 +212,22 @@ def create_transaction_cli():
     return "Success", 200
 
 
+@app.route(rule="/balance/")
+def get_balance_for_all_nodes():
+    """
+    We don't lock here, even though for 'consistency' we would have to
+    However, if there are multiple transactions ongoing in the network, consistency doesn't really exist since
+    even if we lock, from the moment this endpoint returns and the moment the user reads the information the
+    balance might change either way
+    So we can avoid using a lock here, since it wouldn't really benefit the end user even if it would be a better
+    software engineering practice
+    TODO: Discuss this
+    :return:
+    """
+    res = {}
+    for k, utxos in node.blockchain.utxos_dict.items():
+        res[k] = sum([i.amount for i in utxos])
+    return jsonify(res), 200
 
 def all_nodes_here():
     time.sleep(2)
