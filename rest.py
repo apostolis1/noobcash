@@ -240,6 +240,14 @@ def all_nodes_here():
         time.sleep(5)
 
 
+@app.route("/blockchain_length/")
+def get_blockchain_length():
+    # Return the current length of the blockchain
+    # Used in resolve_conflicts
+    # TODO: Check if chain lock is needed here
+    return {"length": (len(node.blockchain.chain))}, 200
+
+
 if __name__ == '__main__':
     from argparse import ArgumentParser
 
