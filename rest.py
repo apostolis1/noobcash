@@ -5,8 +5,7 @@ from noobcash.Wallet import Wallet
 from noobcash.Node import Node
 from noobcash.Blockchain import Blockchain
 from noobcash.Transaction import Transaction
-from noobcash.utils import blockchain_from_dict, transaction_from_dict, \
-    create_transaction, block_from_dict, check_utxos
+from noobcash.utils import blockchain_from_dict, transaction_from_dict, create_transaction, block_from_dict, check_utxos
 import time
 import threading
 from copy import deepcopy
@@ -45,9 +44,7 @@ def get_blockchain():
 @app.route(rule="/register")
 def register_node():
     # Endpoint where the bootstrap node is waiting for the info from other nodes
-    # Is responsible for everything that should be done when a node is trying to enter the system
-    # meaning sending the blockchain copy, notifying all the nodes about the info of the entire network once
-    # all the nodes have been registered
+    # Is r #TODO: check if we need a chain lockthe nodes have been registered
     ip_addr = request.args.get('ip')
     port = request.args.get('port')
     public_key = request.args.get('public_key')
@@ -102,25 +99,14 @@ def process_transaction_from_pool():
         t: Transaction = transaction_pool.pop(0)
         pool_get_lock.release()
         utxos_lock.acquire()
+        if not t.verify:
+            utxos_lock.release()
+            print(f"Transaction {t} could not be verified")
+            return
+        utxos_lock.release()
         # print("Processing transaction ")
         # TODO:  this does not work as bootstrap node cannot find the t_input in node.utxos_dict
         # and thus it raises error
-        if not t.verify():
-            utxos_lock.release()
-            return
-        # We don't check our own transactions, because we have already removed the utxos during create_transaction
-        # if not t.sender_address == node.wallet.address:
-        #     for t_input in t.transaction_inputs:
-        #         if t_input not in node.utxos_dict[t_input.recipient]:
-        #             print(f"Cant find  input with id: {t_input.unique_id} and amount: {t_input.amount} in {[i.unique_id  for i in node.utxos_dict[t_input.recipient]]}")
-        #         node.utxos_dict[t_input.recipient].remove(t_input)
-        #     for t_output in t.transaction_outputs:
-        #         try:
-        #             node.utxos_dict[t_output.recipient].append(t_output)
-        #         except KeyError:
-        #             node.utxos_dict[t_output.recipient] = [t_output]
-        # print(f"Processing transaction {t}")
-        utxos_lock.release()
         node.add_transaction(t)
     else:
         print("Processing transaction halted because I am already mining, assuming someone will trigger me later")
@@ -165,7 +151,6 @@ def receive_block():
     print("Utxos_lock acquired")
     blockchain_lock.acquire()
     print("Blockchain lock acquired")
-
     # Check the transactions in the block compared to the ones in the blockchain to see if we can add the block
     # if not check_utxos(utxos_copy, block):
     #     print(f"Current blockchain has length {len(node.blockchain.chain)}")
@@ -174,6 +159,7 @@ def receive_block():
     #     return "Utxos don't match, not adding to blockchain", 400
     # Add block to blockchain, this handles updating the utxos dict of the blockchain as well as our local utxos_dict
     node.add_block_to_blockchain(block)
+
     utxos_lock.release()
     print("Utxos lock released")
     blockchain_lock.release()
@@ -262,7 +248,7 @@ def all_nodes_here():
         thread = threading.Thread(target=node.broadcast_transaction, args=[t])
         thread.start()
         thread.join()
-        print(f"Successfully broadcasted transaction {t}")
+        #print(f"Successfully broadcasted transaction {t}")
         time.sleep(3)
 
 
@@ -274,10 +260,10 @@ def get_blockchain_length():
     return {"length": (len(node.blockchain.chain))}, 200
 
 
-@app.route("/resolve_conflicts/")
-def rest_resolve_conflicts():
-    node.resolve_conflicts()
-    return "Success", 200
+# @app.route("/resolve_conflicts/")
+# def rest_resolve_conflicts():
+#     node.resolve_conflicts()
+#     return "Success", 200
 
 
 @app.route("/blockchain_differences/", methods=["POST"])

@@ -1,6 +1,8 @@
 import requests
 import inquirer
 import os
+from argparse import Namespace
+from time import sleep
 
 MASTER_IP = "127.0.0.1:5000"
 
@@ -24,6 +26,7 @@ def create_transaction(args):
     sender = args.sender
     receiver = args.receiver
     amount = args.amount
+    print(sender, receiver, amount)
     try:
         base_url = ring[sender]['url']
     except KeyError:
@@ -56,6 +59,7 @@ def transactions_from_file(args):
     try:
         with open(file, 'r') as f:
             for line in f.readlines():
+                sleep(0.5)
                 line_split = line.split()
                 receiver = line_split[0]
                 amount = int(line_split[1])
@@ -112,31 +116,36 @@ if __name__ == '__main__':
     args = parser.parse_args()
     args.func(args)
 
-    while True:
-        question_action = [
-            inquirer.List(name = 'actions',
-                        message='What action would you like to do?',
-                        choices=['Make a new transaction', 'View balance', 'View last Transaction', 'Help', 'Cancel']
-                    ),
-        ]
-        answer_action = inquirer.prompt(question_action, theme=inquirer.themes.GreenPassion())['actions']
-        os.system('cls||clear')
-        match answer_action:
-            case 'Make a new transaction':
-                question_transaction = [
-                    inquirer.Text(name = 'sender', message='Who is the sender?'),
-                    inquirer.Text(name = 'receiver', message='Who is the receiver?'),
-                    inquirer.Text(name='amount', message="How much NBC would you like to send?")
-                    ]
-                answer_transaction = inquirer.prompt(question_transaction, theme=inquirer.themes.GreenPassion())
-                sender = answer_transaction['sender']
-                receiver = answer_transaction['receiver']
-                amount = answer_transaction['amount']
-            case 'View balance':
-                print('balance')
-            case 'View last Transaction':
-                print("view")
-            case 'Help':
-                print('help')
-            case 'Cancel':
-                break
+    # os.system('cls||clear')
+    # print('Welcome to NBC')
+    # print('-'*50)
+    # while True:
+    #     question_action = [
+    #         inquirer.List(name = 'actions',
+    #                     message='What action would you like to do?',
+    #                     choices=['Make a new transaction', 'View balance', 'View last Transaction', 'Help', 'Cancel']
+    #                 ),
+    #     ]
+    #     answer_action = inquirer.prompt(question_action, theme=inquirer.themes.GreenPassion())['actions']
+    #     os.system('cls||clear')
+    #     match answer_action:
+    #         case 'Make a new transaction':
+    #             question_transaction = [
+    #                 inquirer.Text(name = 'sender', message='Who is the sender?'),
+    #                 inquirer.Text(name = 'receiver', message='Who is the receiver?'),
+    #                 inquirer.Text(name='amount', message="How much NBC would you like to send?")
+    #                 ]
+    #             answer_transaction = inquirer.prompt(question_transaction, theme=inquirer.themes.GreenPassion())
+    #             # sender = answer_transaction['sender']
+    #             # receiver = answer_transaction['receiver']
+    #             # amount = answer_transaction['amount']
+    #             arg_pars = Namespace(**answer_transaction)
+    #             create_transaction(arg_pars)
+    #         case 'View balance':
+    #             print('balance')
+    #         case 'View last Transaction':
+    #             print("view")
+    #         case 'Help':
+    #             print('help')
+    #         case 'Cancel':
+    #             break

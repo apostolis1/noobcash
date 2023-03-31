@@ -107,6 +107,7 @@ class Node:
         return
 
     def add_transaction(self, t: Transaction):
+        #TODO: check if we need a chain lock
         if self.blockchain.add_transaction(t):
             # transaction added filled the block, so I start mining
             child_process = Thread(target=self.mine_block)

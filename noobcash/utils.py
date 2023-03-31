@@ -9,6 +9,7 @@ from copy import deepcopy
 def create_transaction(sender_wallet: Wallet, receiver_address, amount, utxos_list: list):
     previous_amount = sum(i.amount for i in utxos_list)
     if amount > previous_amount:
+        print(f"I have {previous_amount} < {amount}, can't create transaction")
         return None
     utxos_to_spend = Transaction.find_transaction_inputs_for_amount(utxos_list, amount)
     # for i in utxos_to_spend:
