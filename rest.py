@@ -224,10 +224,14 @@ def get_balance_for_all_nodes():
     TODO: Discuss this
     :return:
     """
+    key_to_id = {}
+    for k,v in node.ring.items():
+        key_to_id[v["public_key"]] = k
     res = {}
     for k, utxos in node.blockchain.utxos_dict.items():
-        res[k] = sum([i.amount for i in utxos])
+        res[key_to_id[k]] = sum([i.amount for i in utxos])
     return jsonify(res), 200
+
 
 def all_nodes_here():
     time.sleep(2)
