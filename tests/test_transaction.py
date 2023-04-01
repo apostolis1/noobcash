@@ -1,7 +1,7 @@
-from noobcash.Transaction import  Transaction
-from noobcash.TransactionOutput import TransactionOutput
-from noobcash.utils import create_transaction, print_utxos
-from noobcash.Wallet import Wallet
+from src.noobcash.Transaction import Transaction
+from src.noobcash.TransactionOutput import TransactionOutput
+from src.noobcash.utils import create_transaction, print_utxos
+from src.noobcash.Wallet import Wallet
 
 
 def test_transaction_creation():

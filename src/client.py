@@ -59,7 +59,7 @@ def transactions_from_file(args):
     try:
         with open(file, 'r') as f:
             for line in f.readlines():
-                sleep(0.5)
+                sleep(1)
                 line_split = line.split()
                 receiver = line_split[0]
                 amount = int(line_split[1])

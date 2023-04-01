@@ -1,4 +1,4 @@
-from noobcash import Blockchain
+from src.noobcash import Blockchain
 
 
 def test_empty_validity():

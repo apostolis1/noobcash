@@ -275,21 +275,28 @@ def get_blockchain_length():
 
 @app.route("/blockchain_differences/", methods=["POST"])
 def get_blockchain_differences():
+    # blockchain_lock.acquire()
     sender_hashed = request.json["hashes"]
-    print("Received hashes")
-    print(sender_hashed)
+    print(f"Received {len(sender_hashed)} hashes, I have {len(node.blockchain.chain)}")
+    # print(sender_hashed)
     start_idx = None
     for idx, block_hash in enumerate(sender_hashed):
         if node.blockchain.chain[idx].current_hash != block_hash:
             start_idx = idx
             break
     if start_idx is None:
-        start_idx = len(node.blockchain.chain)
+        # start_idx = len(node.blockchain.chain)
+        start_idx = len(sender_hashed)
     blocks_to_send = node.blockchain.chain[start_idx:]
     print(f"Difference found in position {start_idx}, will send {len(blocks_to_send)} blocks")
+    if len(blocks_to_send) >= 1:
+        print(f"The last block I will send has hash {blocks_to_send[-1].current_hash}")
+    else:
+        print("Blocks to send is empty inside get_blockchain_differences")
     blocks_dict = [i.to_dict() for i in blocks_to_send]
     # TODO: I need to send also UTXOs, current_block and transaction_pool
     transaction_pool_dict = [i.to_dict() for i in transaction_pool]
+    # blockchain_lock.release()
     return {
         "blocks": blocks_dict,
         "conflict_idx": start_idx,

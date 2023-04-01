@@ -5,7 +5,7 @@ from noobcash.Block import Block
 from noobcash.Blockchain import Blockchain
 from noobcash.Transaction import Transaction
 from noobcash.TransactionOutput import TransactionOutput
-from noobcash.utils import create_transaction, transaction_output_from_dict, transaction_from_dict
+from noobcash.utils import create_transaction, transaction_output_from_dict, transaction_from_dict, block_from_dict
 import requests
 import time
 import os
@@ -146,19 +146,26 @@ class Node:
         # Send only hashes of block to the node with the biggest chain
         hashes_to_send = {"hashes": [i.current_hash for i in self.blockchain.chain]}
         url_base = self.ring[f"id{biggest_node_id}"]['url']
-        url = f"http://{url_base}/blockchain_differences"
+        url = f"http://{url_base}/blockchain_differences/"
         res = requests.post(url, json=hashes_to_send)
+        if res.status_code != 200:
+            print(f"Error when requesting {url}, status_code: {res.status_code}")
+            print(res.content)
         res_json = res.json()
+
         new_chain = self.blockchain.chain[:res_json["conflict_idx"]]
-        new_chain.extend(res_json["blocks"])
+        # Convert dict to block object
+        second_part = [block_from_dict(b_dict) for b_dict in res_json["blocks"]]
+        new_chain.extend(second_part)
         self.blockchain.chain = new_chain
         # TODO: need to check how to call pool and utxo locks
         self.transaction_pool = [transaction_from_dict(i) for i in res_json["transaction_pool"]]
         self.blockchain.utxos_dict = {k: [transaction_output_from_dict(i) for i in v] for k,v in res_json["blockchain_utxos"].items()}
         self.blockchain.current_block_utxos = {k: [transaction_output_from_dict(i) for i in v] for k,v in res_json["current_block_utxos"].items()}
 
-        print(self.blockchain.current_block_utxos)
+        # print(self.blockchain.current_block_utxos)
         # self.blockchain.current_block_utxos = [transaction_output_from_dict(i) for i in res_json["current_block_utxos"]]
         # print(res_json)
+        print(f"Last block current_hash after asking is {self.blockchain.getLastBlock().current_hash}")
         print("Resolve conflicts finished")
         return
