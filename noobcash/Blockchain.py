@@ -101,12 +101,6 @@ class Blockchain:
     def add_transaction(self, t: Transaction) -> bool:
         # Returns True if we need to start mining
         # TODO: Check if this condition is correct, maybe checks are required in additional places
-        # print(f"I sam inside node.blockchain.add_transaction() and I am processing transaction with input amount: "
-        #       f"{t.transaction_inputs[0].amount} and input id {t.transaction_inputs[0].unique_id[-5:]}")
-        # print(f"I sam inside node.blockchain.add_transaction() and I am processing transaction with output_0 with "
-        #       f"amount: {t.transaction_outputs[0].amount} and input id {t.transaction_outputs[0].unique_id[-5:]}")
-        # print(f"I sam inside node.blockchain.add_transaction() and I am processing transaction with output_1 with "
-        #       f"amount: {t.transaction_outputs[1].amount} and input id {t.transaction_outputs[1].unique_id[-5:]}")
         if self.current_block is None or self.getLastBlock() == self.current_block:
             print("Creating a new current_block and adding transaction there")
             last_block = self.getLastBlock()
@@ -114,8 +108,11 @@ class Blockchain:
             self.current_block_utxos = deepcopy(self.utxos_dict)
             # If the transaction is not valid for the given current_block state, return False without adding it
             if not self.can_transaction_be_added(t):
+                print(f"Discarded transaction with amount {t.amount}")
                 return False
             new_block.add_transaction(t)
+            print(f"Added transaction with amount {t.amount}")
+            
             # Update the current_block_utxos
             for t_input in t.transaction_inputs:
                 self.current_block_utxos[t_input.recipient].remove(t_input)
@@ -128,8 +125,10 @@ class Blockchain:
         else:
             # If the transaction is not valid for the given current_block state, return False without adding it
             if not self.can_transaction_be_added(t):
+                print(f"Discarded transaction with amount {t.amount}")
                 return False
             self.current_block.add_transaction(t)
+            print(f"Added transaction with amount {t.amount}")
             # Update the current_block_utxos
             for t_input in t.transaction_inputs:
                 self.current_block_utxos[t_input.recipient].remove(t_input)
