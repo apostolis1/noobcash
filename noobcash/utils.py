@@ -21,7 +21,11 @@ def create_transaction(sender_wallet: Wallet, receiver_address, amount, utxos_li
 
     transaction = Transaction(sender_address=sender_wallet.public_key, recipient_address=receiver_address, value=amount,
                               transaction_inputs=inputs)
-    outputs = transaction.create_transaction_outputs(previous_amount)
+    input_sum = sum(i.amount for i in utxos_to_spend)
+    outputs = transaction.create_transaction_outputs(input_sum)
+    if outputs[0].amount + outputs[1].amount != sum([i.amount for i in utxos_to_spend]):
+        print("Invalid transactions output sum")
+        print(f"Error because {outputs[0].amount} + {outputs[1].amount} != {input_sum}")
     transaction.transaction_outputs = outputs
     # update the list of utxos
     # The first output is always the remaining amount to us

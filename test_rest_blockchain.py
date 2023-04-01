@@ -3,7 +3,9 @@ from noobcash.utils import blockchain_from_dict
 import requests
 from noobcash.Block import Block
 
-url_list = [f"http://127.0.0.1:500{i}/blockchain" for i in range(5)]
+# url_list = [f"http://127.0.0.1:500{i}/blockchain" for i in range(5)]
+url_list = ['http://127.0.0.1:5000/blockchain', 'http://127.0.0.1:5005/blockchain', 'http://127.0.0.1:5002/blockchain', 'http://127.0.0.1:5003/blockchain', 'http://127.0.0.1:5004/blockchain']
+
 
 for url in url_list:
     print('-'*50)

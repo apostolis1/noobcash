@@ -107,7 +107,14 @@ def process_transaction_from_pool():
         # print("Processing transaction ")
         # TODO:  this does not work as bootstrap node cannot find the t_input in node.utxos_dict
         # and thus it raises error
-        node.add_transaction(t)
+        blockchain_lock.acquire()
+        try:
+            node.add_transaction(t)
+            blockchain_lock.release()
+        except Exception as e:
+            print(e)
+            blockchain_lock.release()
+        threading.Thread(target=process_transaction_from_pool).start()
     else:
         print("Processing transaction halted because I am already mining, assuming someone will trigger me later")
     return
