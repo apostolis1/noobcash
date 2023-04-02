@@ -150,7 +150,7 @@ def receive_block():
     # print("receive_block method has been called properly")
     block_dict = request.json
     block = block_from_dict(block_dict)
-    print(f"Received Block with current hash: {block.current_hash}")
+    print(f"Received Block with current hash: {block.current_hash} at {time.ctime()}")
     if block.current_hash is None:
         raise Exception("None current hash received")
     print(f"Mining value: {node.mining}")
@@ -171,7 +171,7 @@ def receive_block():
     print("Utxos lock released")
     blockchain_lock.release()
     print("Blockchain lock released")
-
+    print(f"Added block to blockchain at {time.ctime()}")
     # Process next transaction in pool
     threading.Thread(target=process_transaction_from_pool).start()
     return "Success", 200
@@ -227,6 +227,7 @@ def get_balance_for_all_nodes():
 
 
 def all_nodes_here():
+    print(f"All nodes are here at {time.ctime()}")
     time.sleep(2)
     existing_nodes = node.ring
     for n in existing_nodes.values():
@@ -322,6 +323,7 @@ if __name__ == '__main__':
     master_ip = app.config["MASTER_IP"]
     master_url = f"http://{master_ip}:5000"
     is_bootstrap = (port == 5000)
+    print(f"The init of the system started at {time.ctime()}")
     if is_bootstrap:
         print("Initialization for bootstrap node")
         blockchain = Blockchain(nodes, capacity=capacity, difficulty=difficulty)
