@@ -124,12 +124,16 @@ class Blockchain:
                     self.current_block_utxos[t_output.recipient] = [t_output]
             self.current_block = new_block
         else:
+
+            print("Appending to current block...")
+            if self.current_block is not None:
+                print("... Because current block is not None")
             # If the transaction is not valid for the given current_block state, return False without adding it
             if not self.can_transaction_be_added(t):
                 print(f"Discarded transaction with amount {t.amount}")
                 return False
             self.current_block.add_transaction(t)
-            print(f"Added transaction with amount {t.amount}")
+            # print(f"Added transaction with amount {t.amount}")
             # Update the current_block_utxos
             for t_input in t.transaction_inputs:
                 self.current_block_utxos[t_input.recipient].remove(t_input)

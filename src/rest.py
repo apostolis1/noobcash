@@ -9,7 +9,7 @@ from noobcash.utils import blockchain_from_dict, transaction_from_dict, create_t
 import time
 import threading
 from copy import deepcopy
-
+from threading import get_ident
 
 # App initialization and global declarations
 app = Flask(__name__)
@@ -20,7 +20,7 @@ CORS(app)
 pool_get_lock = threading.Lock()
 utxos_lock = threading.Lock()
 blockchain_lock = threading.Lock()
-
+thread_lock = threading.Lock()
 
 # Route registration
 @app.route('/health', methods=['GET'])
@@ -90,33 +90,35 @@ def create_transaction_endpoint():
 
 def process_transaction_from_pool():
     # TODO: Check if lock needed
-    if not node.mining:
-        pool_get_lock.acquire()
-        if len(transaction_pool) == 0:
+    with thread_lock:
+        if not node.mining:
+            pool_get_lock.acquire()
+            if len(transaction_pool) == 0:
+                pool_get_lock.release()
+                print("Pool is empty, returning")
+                return
+            t: Transaction = transaction_pool.pop(0)
+            print(f"{get_ident()} Popped transaction")
             pool_get_lock.release()
-            print("Pool is empty, returning")
-            return
-        t: Transaction = transaction_pool.pop(0)
-        pool_get_lock.release()
-        utxos_lock.acquire()
-        if not t.verify:
+            utxos_lock.acquire()
+            if not t.verify:
+                utxos_lock.release()
+                print(f"Transaction {t} could not be verified")
+                return
             utxos_lock.release()
-            print(f"Transaction {t} could not be verified")
-            return
-        utxos_lock.release()
-        # print("Processing transaction ")
-        # TODO:  this does not work as bootstrap node cannot find the t_input in node.utxos_dict
-        # and thus it raises error
-        blockchain_lock.acquire()
-        try:
-            node.add_transaction(t)
-            blockchain_lock.release()
-        except Exception as e:
-            print(e)
-            blockchain_lock.release()
-        threading.Thread(target=process_transaction_from_pool).start()
-    else:
-        print("Processing transaction halted because I am already mining, assuming someone will trigger me later")
+            # print("Processing transaction ")
+            # TODO:  this does not work as bootstrap node cannot find the t_input in node.utxos_dict
+            # and thus it raises error
+            blockchain_lock.acquire()
+            try:
+                node.add_transaction(t)
+                blockchain_lock.release()
+            except Exception as e:
+                print(e)
+                blockchain_lock.release()
+            threading.Thread(target=process_transaction_from_pool).start()
+        else:
+            print("Processing transaction halted because I am already mining, assuming someone will trigger me later")
     return
 
 
@@ -145,35 +147,36 @@ def get_transaction_pool():
 
 @app.route(rule="/block/get", methods=["POST"])
 def receive_block():
-    # TODO: Check if lock is needed when calling add_block_to_blockchain
-    # Endpoint where each node is waiting for blocks to be broadcasted
-    # print("receive_block method has been called properly")
-    block_dict = request.json
-    block = block_from_dict(block_dict)
-    print(f"Received Block with current hash: {block.current_hash} at {time.ctime()}")
-    if block.current_hash is None:
-        raise Exception("None current hash received")
-    print(f"Mining value: {node.mining}")
-    utxos_lock.acquire()
-    print("Utxos_lock acquired")
-    blockchain_lock.acquire()
-    print("Blockchain lock acquired")
-    # Check the transactions in the block compared to the ones in the blockchain to see if we can add the block
-    # if not check_utxos(utxos_copy, block):
-    #     print(f"Current blockchain has length {len(node.blockchain.chain)}")
-    #     print("Utxos are not good")
-    #     utxos_lock.release()
-    #     return "Utxos don't match, not adding to blockchain", 400
-    # Add block to blockchain, this handles updating the utxos dict of the blockchain as well as our local utxos_dict
-    node.add_block_to_blockchain(block)
+    with thread_lock:
+        # TODO: Check if lock is needed when calling add_block_to_blockchain
+        # Endpoint where each node is waiting for blocks to be broadcasted
+        # print("receive_block method has been called properly")
+        block_dict = request.json
+        block = block_from_dict(block_dict)
+        print(f"Received Block with current hash: {block.current_hash} at {time.ctime()}")
+        if block.current_hash is None:
+            raise Exception("None current hash received")
+        print(f"Mining value: {node.mining}")
+        utxos_lock.acquire()
+        print("Utxos_lock acquired")
+        blockchain_lock.acquire()
+        print("Blockchain lock acquired")
+        # Check the transactions in the block compared to the ones in the blockchain to see if we can add the block
+        # if not check_utxos(utxos_copy, block):
+        #     print(f"Current blockchain has length {len(node.blockchain.chain)}")
+        #     print("Utxos are not good")
+        #     utxos_lock.release()
+        #     return "Utxos don't match, not adding to blockchain", 400
+        # Add block to blockchain, this handles updating the utxos dict of the blockchain as well as our local utxos_dict
+        node.add_block_to_blockchain(block)
 
-    utxos_lock.release()
-    print("Utxos lock released")
-    blockchain_lock.release()
-    print("Blockchain lock released")
-    print(f"Added block to blockchain at {time.ctime()}")
-    # Process next transaction in pool
-    threading.Thread(target=process_transaction_from_pool).start()
+        utxos_lock.release()
+        print("Utxos lock released")
+        blockchain_lock.release()
+        print("Blockchain lock released")
+        print(f"Added block to blockchain at {time.ctime()}")
+        # Process next transaction in pool
+        threading.Thread(target=process_transaction_from_pool).start()
     return "Success", 200
 
 
