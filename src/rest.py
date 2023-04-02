@@ -329,7 +329,7 @@ if __name__ == '__main__':
         node.blockchain = blockchain
         master_node = {
             "id0": {
-                "url": f"127.0.0.1:{port}",
+                "url": f"{master_ip}:{port}",
                 "public_key": node.wallet.public_key
             }
         }

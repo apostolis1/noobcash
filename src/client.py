@@ -3,8 +3,9 @@ import inquirer
 import os
 from argparse import Namespace
 from time import sleep
+from config import Config
 
-MASTER_IP = "127.0.0.1:5000"
+MASTER_IP = f"{Config.MASTER_IP}:5000"
 
 
 def get_ring() -> dict:
