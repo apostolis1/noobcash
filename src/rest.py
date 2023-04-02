@@ -150,7 +150,7 @@ def receive_block():
     # print("receive_block method has been called properly")
     block_dict = request.json
     block = block_from_dict(block_dict)
-    print(f"Received Block with current hash: {block.current_hash}")
+    print(f"Received Block with current hash: {block.current_hash} at {time.ctime()}")
     if block.current_hash is None:
         raise Exception("None current hash received")
     print(f"Mining value: {node.mining}")
@@ -171,7 +171,7 @@ def receive_block():
     print("Utxos lock released")
     blockchain_lock.release()
     print("Blockchain lock released")
-
+    print(f"Added block to blockchain at {time.ctime()}")
     # Process next transaction in pool
     threading.Thread(target=process_transaction_from_pool).start()
     return "Success", 200
@@ -227,6 +227,7 @@ def get_balance_for_all_nodes():
 
 
 def all_nodes_here():
+    print(f"All nodes are here at {time.ctime()}")
     time.sleep(2)
     existing_nodes = node.ring
     for n in existing_nodes.values():
@@ -275,21 +276,28 @@ def get_blockchain_length():
 
 @app.route("/blockchain_differences/", methods=["POST"])
 def get_blockchain_differences():
+    # blockchain_lock.acquire()
     sender_hashed = request.json["hashes"]
-    print("Received hashes")
-    print(sender_hashed)
+    print(f"Received {len(sender_hashed)} hashes, I have {len(node.blockchain.chain)}")
+    # print(sender_hashed)
     start_idx = None
     for idx, block_hash in enumerate(sender_hashed):
         if node.blockchain.chain[idx].current_hash != block_hash:
             start_idx = idx
             break
     if start_idx is None:
-        start_idx = len(node.blockchain.chain)
+        # start_idx = len(node.blockchain.chain)
+        start_idx = len(sender_hashed)
     blocks_to_send = node.blockchain.chain[start_idx:]
     print(f"Difference found in position {start_idx}, will send {len(blocks_to_send)} blocks")
+    if len(blocks_to_send) >= 1:
+        print(f"The last block I will send has hash {blocks_to_send[-1].current_hash}")
+    else:
+        print("Blocks to send is empty inside get_blockchain_differences")
     blocks_dict = [i.to_dict() for i in blocks_to_send]
     # TODO: I need to send also UTXOs, current_block and transaction_pool
     transaction_pool_dict = [i.to_dict() for i in transaction_pool]
+    # blockchain_lock.release()
     return {
         "blocks": blocks_dict,
         "conflict_idx": start_idx,
@@ -304,13 +312,18 @@ if __name__ == '__main__':
 
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=5000, type=int, help='port to listen on')
+    parser.add_argument('-i', '--ip', default='0.0.0.0', type=str, help='IP to listen on')
+
     args = parser.parse_args()
     port = args.port
+    node_ip = args.ip
     nodes = app.config["NUMBER_OF_NODES"]
     capacity = app.config["CAPACITY"]
     difficulty = app.config["DIFFICULTY"]
-    master_url = app.config["MASTER_URL"]
+    master_ip = app.config["MASTER_IP"]
+    master_url = f"http://{master_ip}:5000"
     is_bootstrap = (port == 5000)
+    print(f"The init of the system started at {time.ctime()}")
     if is_bootstrap:
         print("Initialization for bootstrap node")
         blockchain = Blockchain(nodes, capacity=capacity, difficulty=difficulty)
@@ -318,7 +331,7 @@ if __name__ == '__main__':
         node.blockchain = blockchain
         master_node = {
             "id0": {
-                "url": f"127.0.0.1:{port}",
+                "url": f"{master_ip}:{port}",
                 "public_key": node.wallet.public_key
             }
         }
@@ -331,7 +344,7 @@ if __name__ == '__main__':
     else:
         print("Creating participation node")
         data = {
-            "ip": "127.0.0.1", # TODO : Make this our current ip
+            "ip": node_ip, # TODO : Make this our current ip
             "port": port,
             "public_key": node.wallet.public_key
         }
@@ -350,4 +363,4 @@ if __name__ == '__main__':
         except KeyError:
             node.my_utxos = []
         
-    app.run(host='0.0.0.0', port=port, threaded=True)
+    app.run(host=node_ip, port=port, threaded=True)

@@ -1,7 +1,7 @@
-from noobcash.Wallet import Wallet
-from noobcash.Transaction import Transaction
-from noobcash.TransactionOutput import TransactionOutput
-from noobcash.utils import *
+# from noobcash.Wallet import Wallet
+# from noobcash.Transaction import Transaction
+# from noobcash.TransactionOutput import TransactionOutput
+from src.noobcash.utils import *
 from random import randint
 
 

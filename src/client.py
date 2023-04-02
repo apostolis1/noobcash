@@ -3,8 +3,9 @@ import inquirer
 import os
 from argparse import Namespace
 from time import sleep
+from config import Config
 
-MASTER_IP = "127.0.0.1:5000"
+MASTER_IP = f"{Config.MASTER_IP}:5000"
 
 
 def get_ring() -> dict:
@@ -59,7 +60,7 @@ def transactions_from_file(args):
     try:
         with open(file, 'r') as f:
             for line in f.readlines():
-                sleep(0.5)
+                sleep(1)
                 line_split = line.split()
                 receiver = line_split[0]
                 amount = int(line_split[1])

@@ -7,6 +7,7 @@ from noobcash.TransactionOutput import TransactionOutput
 from copy import deepcopy
 from typing import List
 
+
 class Blockchain:
     def __init__(self, nodes, chain=None, capacity=None, difficulty=None, utxos_dict=None) -> None:
         if chain is None:
