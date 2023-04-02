@@ -1,6 +1,6 @@
-from src.noobcash.Wallet import Wallet
-from src.noobcash.Transaction import Transaction
-from src.noobcash.TransactionOutput import TransactionOutput
+from noobcash.Wallet import Wallet
+from noobcash.Transaction import Transaction
+from noobcash.TransactionOutput import TransactionOutput
 
 def print_utxos(dict_of_utxos):
     for k,v in dict_of_utxos.items():
