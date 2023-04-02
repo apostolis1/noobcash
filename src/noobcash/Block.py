@@ -4,6 +4,8 @@ import random
 from typing import List
 from noobcash.Transaction import Transaction
 from threading import Event
+from noobcash.InterruptException import InterruptException
+
 
 class Block:
 	def __init__(self, index=0, previous_hash='', nonce=0, current_hash=None, list_of_transactions=None, timestamp=None, capacity=None):
@@ -49,7 +51,7 @@ class Block:
 		while not self.my_hash(nonce_attempt).startswith('0' * difficulty):
 			if event.is_set():
 				print("Someone stopped me, will stop mining...")
-				raise Exception("Stopped mining")
+				raise InterruptException
 			nonce_attempt += 1
 		self.nonce = nonce_attempt
 		self.current_hash = self.my_hash(self.nonce)

@@ -12,7 +12,7 @@ import os
 import signal
 from copy import deepcopy
 from threading import Thread, Event
-
+from noobcash.InterruptException import InterruptException
 
 class Node:
     def __init__(self, blockchain=None):
@@ -92,10 +92,12 @@ class Node:
     
     def mine_block(self):
         self.mining = True
+        self.event.clear()
         print("SET MINING TO TRUE")
+        print("Starting to mine block...")
         try:
             self.blockchain.current_block.get_nonce(self.blockchain.difficulty, self.event)
-        except Exception as e:
+        except InterruptException as e:
             self.mining = False
             print("Stopped mining because someone stopped me, setting mining to false and exiting without broadcasting")
             return
@@ -107,8 +109,10 @@ class Node:
         return
 
     def add_transaction(self, t: Transaction):
-        #TODO: check if we need a chain lock
+        # TODO: check if we need a chain lock
         if self.blockchain.add_transaction(t):
+            self.mining = True
+            self.event.clear()
             # transaction added filled the block, so I start mining
             child_process = Thread(target=self.mine_block)
             child_process.start()
@@ -141,6 +145,9 @@ class Node:
             if v > biggest_length or (v == biggest_length and k < biggest_node_id):
                 biggest_length = v
                 biggest_node_id = k
+        if biggest_length <= len(self.blockchain.chain):
+            print("Can't find someone with bigger chain, simply returning")
+            return
         print(f"I will ask node id {biggest_node_id} with length {biggest_length} for the chain")
         # We don't need the whole chain, only the part where our chains differ
         # Send only hashes of block to the node with the biggest chain
