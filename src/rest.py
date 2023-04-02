@@ -311,12 +311,16 @@ if __name__ == '__main__':
 
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=5000, type=int, help='port to listen on')
+    parser.add_argument('-i', '--ip', default='0.0.0.0', type=str, help='IP to listen on')
+
     args = parser.parse_args()
     port = args.port
+    node_ip = args.ip
     nodes = app.config["NUMBER_OF_NODES"]
     capacity = app.config["CAPACITY"]
     difficulty = app.config["DIFFICULTY"]
-    master_url = app.config["MASTER_URL"]
+    master_ip = app.config["MASTER_IP"]
+    master_url = f"http://{master_ip}:5000"
     is_bootstrap = (port == 5000)
     if is_bootstrap:
         print("Initialization for bootstrap node")
@@ -338,7 +342,7 @@ if __name__ == '__main__':
     else:
         print("Creating participation node")
         data = {
-            "ip": "127.0.0.1", # TODO : Make this our current ip
+            "ip": node_ip, # TODO : Make this our current ip
             "port": port,
             "public_key": node.wallet.public_key
         }
@@ -357,4 +361,4 @@ if __name__ == '__main__':
         except KeyError:
             node.my_utxos = []
         
-    app.run(host='0.0.0.0', port=port, threaded=True)
+    app.run(host=node_ip, port=port, threaded=True)
