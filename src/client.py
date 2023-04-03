@@ -115,7 +115,7 @@ def interactive_client(args):
     print('-'*50)
     while True:
         question_action = [
-            inquirer.List(name = 'actions',
+            inquirer.List(name='actions',
                         message='What action would you like to do?',
                         choices=['Make a new transaction', 'View balance', 'View transactions from last block', 'Help', 'Cancel']
                     ),
@@ -148,7 +148,12 @@ def interactive_client(args):
         elif answer_action == 'Help':
             os.system('cls||clear')
             print('-' * 50)
-            print('help')
+            print('You can choose one of the following options using this client:')
+            print('- Make a new transaction: Create a new transaction, you will be asked for additional information')
+            print('- View balance: View the balance for each node')
+            print('- View transactions from last block: View the transactions included in the last confirmed block')
+            print('- Help: Show this message')
+            print('- Cancel: Exit the client')
             print('-' * 50)
         elif answer_action == 'Cancel':
             break
@@ -160,12 +165,12 @@ if __name__ == '__main__':
 
     from argparse import ArgumentParser
     parser = ArgumentParser()
-    subparsers = parser.add_subparsers(dest='name',help='')
+    subparsers = parser.add_subparsers(dest='name', help='')
 
-    parser_t = subparsers.add_parser('i', help='a help')
+    parser_t = subparsers.add_parser('i', help='launch interactive client')
     parser_t.set_defaults(func=interactive_client)
 
-    parser_t = subparsers.add_parser('t', help='a help')
+    parser_t = subparsers.add_parser('t', help='create a new transaction')
     parser_t.add_argument('-s', '--sender', type=str, help='sender id, eg id0')
     parser_t.add_argument('-r', '--receiver', type=str, help='receiver id, eg id0')
     parser_t.add_argument('-a', '--amount',  type=int, help='amount of money to send')
@@ -174,7 +179,7 @@ if __name__ == '__main__':
     parser_view = subparsers.add_parser('view', help='view transactions')
     parser_view.set_defaults(func=view_transactions)
 
-    parser_balance = subparsers.add_parser('balance', help='view transactions')
+    parser_balance = subparsers.add_parser('balance', help='view balance for each node')
     parser_balance.set_defaults(func=balance)
 
     parser_file = subparsers.add_parser('f', help='create transactions from file')
