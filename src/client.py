@@ -5,8 +5,21 @@ from argparse import Namespace
 from time import sleep
 from config import Config
 
+
 MASTER_IP = f"{Config.MASTER_IP}:5000"
 
+
+def get_reverse_ring() -> dict:
+    ring = get_ring()
+    reverse_ring = {
+        v['public_key']: k for k, v in ring.items()
+    }
+    return reverse_ring
+
+
+def get_transaction_str_for_cli(t_dict: dict):
+    reverse_ring = get_reverse_ring()
+    return f"Transaction Id: {t_dict['transaction_id']}, sender: {reverse_ring[t_dict['sender_address']]}, receiver: {reverse_ring[t_dict['receiver_address']]}, amount {t_dict['amount']} NBC"
 
 def get_ring() -> dict:
     url = f"http://{MASTER_IP}/nodes/all"
@@ -15,8 +28,12 @@ def get_ring() -> dict:
 
 
 def view_transactions(args=None):
-    print("Transactions are...")
-
+    # print("Transactions are...")
+    url = f"http://{MASTER_IP}/last_block/"
+    res = requests.get(url=url)
+    res_json = res.json()
+    for k in res_json["transactions"]:
+        print(get_transaction_str_for_cli(k))
     return
 
 
