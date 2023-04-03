@@ -19,7 +19,8 @@ def get_reverse_ring() -> dict:
 
 def get_transaction_str_for_cli(t_dict: dict):
     reverse_ring = get_reverse_ring()
-    return f"Transaction Id: {t_dict['transaction_id']}, sender: {reverse_ring[t_dict['sender_address']]}, receiver: {reverse_ring[t_dict['receiver_address']]}, amount {t_dict['amount']} NBC"
+    # return f"Transaction Id: {t_dict['transaction_id']}, sender: {reverse_ring[t_dict['sender_address']]}, receiver: {reverse_ring[t_dict['receiver_address']]}, amount {t_dict['amount']} NBC"
+    return f"Transaction from sender: {reverse_ring[t_dict['sender_address']]}, to receiver: {reverse_ring[t_dict['receiver_address']]}, amount {t_dict['amount']} NBC"
 
 def get_ring() -> dict:
     url = f"http://{MASTER_IP}/nodes/all"
