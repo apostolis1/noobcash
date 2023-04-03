@@ -105,3 +105,6 @@ class Transaction:
 
     def __str__(self):
         return f"sender_address: {self.sender_address}, receiver_address: {self.receiver_address}, amount: {self.amount}, signature: {self.signature}"
+
+    def get_small_str(self) -> str:
+        return f"{self.sender_address[-5:]} {self.receiver_address[-5:]} {self.amount} {self.transaction_id[-5:]}"
