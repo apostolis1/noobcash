@@ -257,6 +257,15 @@ def all_nodes_here():
         time.sleep(3)
 
 
+@app.route("/last_block/")
+def get_last_block():
+    """
+    Return the last block, used only in cli
+    :return:
+    """
+    last_block = node.blockchain.getLastBlock()
+    return last_block.to_dict(), 200
+
 @app.route("/blockchain_length/")
 def get_blockchain_length():
     # Return the current length of the blockchain
