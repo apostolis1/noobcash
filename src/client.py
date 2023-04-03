@@ -14,20 +14,18 @@ def get_ring() -> dict:
     return res.json()
 
 
-def view_transactions(args):
+def view_transactions(args=None):
     print("Transactions are...")
 
     return
 
 
 def create_transaction(args):
-    print("Create transaction")
-    print(args)
     ring = get_ring()
     sender = args.sender
     receiver = args.receiver
-    amount = args.amount
-    print(sender, receiver, amount)
+    amount = int(args.amount)
+    print(f"Sending {amount} NBC from {sender} to {receiver}")
     try:
         base_url = ring[sender]['url']
     except KeyError:
@@ -85,8 +83,12 @@ def transactions_from_file(args):
     return
 
 
-def balance(args):
-    print("Showing balance")
+def balance(args=None):
+    url = f"http://{MASTER_IP}/balance/"
+    res = requests.get(url=url)
+    for k, v in res.json().items():
+        print(f"{k}: {v} NBC")
+    return
 
 
 def interactive_client(args):
@@ -97,7 +99,7 @@ def interactive_client(args):
         question_action = [
             inquirer.List(name = 'actions',
                         message='What action would you like to do?',
-                        choices=['Make a new transaction', 'View balance', 'View last Transaction', 'Help', 'Cancel']
+                        choices=['Make a new transaction', 'View balance', 'View transactions from last block', 'Help', 'Cancel']
                     ),
         ]
         answer_action = inquirer.prompt(question_action, theme=inquirer.themes.GreenPassion())['actions']
@@ -113,14 +115,24 @@ def interactive_client(args):
             # receiver = answer_transaction['receiver']
             # amount = answer_transaction['amount']
             arg_pars = Namespace(**answer_transaction)
+            os.system('cls||clear')
             create_transaction(arg_pars)
         elif answer_action == 'View balance':
-            print('balance')
-        elif answer_action == 'View last Transaction':
-            print("view")
+            os.system('cls||clear')
+            print('-' * 50)
+            balance()
+            print('-' * 50)
+        elif answer_action == 'View transactions from last block':
+            os.system('cls||clear')
+            print('-' * 50)
+            view_transactions()
+            print('-' * 50)
         elif answer_action == 'Help':
+            os.system('cls||clear')
+            print('-' * 50)
             print('help')
-        elif  answer_action == 'Cancel':
+            print('-' * 50)
+        elif answer_action == 'Cancel':
             break
 
 
