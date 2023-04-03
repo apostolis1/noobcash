@@ -4,10 +4,10 @@ This project was developed in the context of undergrad course "Distributed Syste
 
 It is a simple blockchain cryptocurrency, implemented with flask over REST API
 
-| Authors                                                              |
-|----------------------------------------------------------------------|
-| Apostolis Stamatis ([@apostolis1](https://github.com/apostolis1))    |
-| Dimitrios Mitropoulos ([@cnpapado](https://github.com/dimitrismit))  |
+| Authors                                                                |
+|------------------------------------------------------------------------|
+| Apostolis Stamatis ([@apostolis1](https://github.com/apostolis1))      |
+| Dimitrios Mitropoulos ([@dimitrismit](https://github.com/dimitrismit)) |
 
 ## Installation
 
