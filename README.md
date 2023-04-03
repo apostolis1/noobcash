@@ -36,6 +36,9 @@ There are two different ways the user can use the client:
 ### Interactive
 The more user-friendly approach, started with `python3 client.py i`
 
+A demo can be seen below (the quality is low due to gif encoding)
+
+![](docs/demo.gif)
 
 ### CLI 
 The options provided are:
