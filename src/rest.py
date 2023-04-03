@@ -22,15 +22,25 @@ utxos_lock = threading.Lock()
 blockchain_lock = threading.Lock()
 thread_lock = threading.Lock()
 
+
 # Route registration
+
+
 @app.route('/health', methods=['GET'])
 def get_transactions():
+    """
+    Simple healthcheck
+    :return:
+    """
     return "OK", 200
 
 
 @app.route(rule="/nodes/all")
 def all_nodes_info():
-    # Endpoint to return information the node has about all the other nodes in the network
+    """
+    Endpoint to return information the node has about all the other nodes in the network
+    :return:
+    """
     node_info = node.ring
     # print(node_info)
     return jsonify(node_info), 200
@@ -43,8 +53,11 @@ def get_blockchain():
 
 @app.route(rule="/register")
 def register_node():
-    # Endpoint where the bootstrap node is waiting for the info from other nodes
-    # Is r #TODO: check if we need a chain lockthe nodes have been registered
+    """
+    Endpoint where the bootstrap node is waiting for the info from other nodes
+    Once all nodes are here it creates a new thread to notify them of each other's info
+    :return:
+    """
     ip_addr = request.args.get('ip')
     port = request.args.get('port')
     public_key = request.args.get('public_key')
@@ -67,29 +80,26 @@ def register_node():
 
 @app.route(rule="/transactions/create", methods=['POST'])
 def create_transaction_endpoint():
-    # Endpoint where each node is listening for new transactions to be broadcast
-    # Simply add transaction to pool of pending transactions
+    """
+    Endpoint where each node is listening for new transactions to be broadcast
+    Simply add transaction to pool of pending transactions
+    :return: 
+    """
     transaction_dict = request.json
-    # print(transaction_dict)
     pool_get_lock.acquire()
-    # print("Received transaction")
     t = transaction_from_dict(transaction_dict)
-    # print(f"Receiver address: \t {t.receiver_address}")
     if not t.verify():
         print("Transaction received is not valid, not adding it to pool")
         pool_get_lock.release()
         return "Failed", 400
     transaction_pool.append(t)
-    # for i in transaction_pool:
-    #     print(f"Receiver address: \t {i.receiver_address}")
     pool_get_lock.release()
-    # start new thread that handles the transactions from the pool
+    # Start new thread that handles the transactions from the pool
     threading.Thread(target=process_transaction_from_pool).start()
     return "Success", 200
 
 
 def process_transaction_from_pool():
-    # TODO: Check if lock needed
     with thread_lock:
         if not node.mining:
             pool_get_lock.acquire()
@@ -106,9 +116,6 @@ def process_transaction_from_pool():
                 print(f"Transaction {t} could not be verified")
                 return
             utxos_lock.release()
-            # print("Processing transaction ")
-            # TODO:  this does not work as bootstrap node cannot find the t_input in node.utxos_dict
-            # and thus it raises error
             blockchain_lock.acquire()
             try:
                 node.add_transaction(t)
@@ -131,11 +138,9 @@ def get_nodes_info():
 
 @app.route(rule="/utxos/all")
 def get_utxos():
-    print("Trying to get utxos from blockchain")
     res = {}
     for k in node.blockchain.utxos_dict.keys():
         res[k] = [i.to_dict() for i in node.blockchain.utxos_dict[k]]
-    print("Got utxos from blockchain, returning")
     return jsonify(res), 200
 
 
@@ -148,7 +153,6 @@ def get_transaction_pool():
 @app.route(rule="/block/get", methods=["POST"])
 def receive_block():
     with thread_lock:
-        # TODO: Check if lock is needed when calling add_block_to_blockchain
         # Endpoint where each node is waiting for blocks to be broadcasted
         # print("receive_block method has been called properly")
         block_dict = request.json
@@ -161,15 +165,7 @@ def receive_block():
         print("Utxos_lock acquired")
         blockchain_lock.acquire()
         print("Blockchain lock acquired")
-        # Check the transactions in the block compared to the ones in the blockchain to see if we can add the block
-        # if not check_utxos(utxos_copy, block):
-        #     print(f"Current blockchain has length {len(node.blockchain.chain)}")
-        #     print("Utxos are not good")
-        #     utxos_lock.release()
-        #     return "Utxos don't match, not adding to blockchain", 400
-        # Add block to blockchain, this handles updating the utxos dict of the blockchain as well as our local utxos_dict
         node.add_block_to_blockchain(block)
-
         utxos_lock.release()
         print("Utxos lock released")
         blockchain_lock.release()
@@ -217,7 +213,6 @@ def get_balance_for_all_nodes():
     balance might change either way
     So we can avoid using a lock here, since it wouldn't really benefit the end user even if it would be a better
     software engineering practice
-    TODO: Discuss this
     :return:
     """
     key_to_id = {}
@@ -259,9 +254,17 @@ def all_nodes_here():
         thread = threading.Thread(target=node.broadcast_transaction, args=[t])
         thread.start()
         thread.join()
-        #print(f"Successfully broadcasted transaction {t}")
         time.sleep(3)
 
+
+@app.route("/last_block/")
+def get_last_block():
+    """
+    Return the last block, used only in cli
+    :return:
+    """
+    last_block = node.blockchain.getLastBlock()
+    return last_block.to_dict(), 200
 
 @app.route("/blockchain_length/")
 def get_blockchain_length():
@@ -271,25 +274,17 @@ def get_blockchain_length():
     return {"length": (len(node.blockchain.chain))}, 200
 
 
-# @app.route("/resolve_conflicts/")
-# def rest_resolve_conflicts():
-#     node.resolve_conflicts()
-#     return "Success", 200
-
-
 @app.route("/blockchain_differences/", methods=["POST"])
 def get_blockchain_differences():
     # blockchain_lock.acquire()
     sender_hashed = request.json["hashes"]
     print(f"Received {len(sender_hashed)} hashes, I have {len(node.blockchain.chain)}")
-    # print(sender_hashed)
     start_idx = None
     for idx, block_hash in enumerate(sender_hashed):
         if node.blockchain.chain[idx].current_hash != block_hash:
             start_idx = idx
             break
     if start_idx is None:
-        # start_idx = len(node.blockchain.chain)
         start_idx = len(sender_hashed)
     blocks_to_send = node.blockchain.chain[start_idx:]
     print(f"Difference found in position {start_idx}, will send {len(blocks_to_send)} blocks")
@@ -300,7 +295,6 @@ def get_blockchain_differences():
     blocks_dict = [i.to_dict() for i in blocks_to_send]
     # TODO: I need to send also UTXOs, current_block and transaction_pool
     transaction_pool_dict = [i.to_dict() for i in transaction_pool]
-    # blockchain_lock.release()
     return {
         "blocks": blocks_dict,
         "conflict_idx": start_idx,
@@ -339,7 +333,6 @@ if __name__ == '__main__':
             }
         }
         node.ring = master_node
-        # node.utxos_dict = {node.wallet.public_key : deepcopy(node.blockchain.chain[0].list_of_transactions[0].transaction_outputs)}
         try:
             node.my_utxos = deepcopy(node.blockchain.utxos_dict[node.wallet.address])
         except KeyError:
@@ -347,7 +340,7 @@ if __name__ == '__main__':
     else:
         print("Creating participation node")
         data = {
-            "ip": node_ip, # TODO : Make this our current ip
+            "ip": node_ip,
             "port": port,
             "public_key": node.wallet.public_key
         }
