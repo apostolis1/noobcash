@@ -12,7 +12,7 @@ class Blockchain:
     def __init__(self, nodes, chain=None, capacity=None, difficulty=None, utxos_dict=None) -> None:
         if chain is None:
             chain = []
-        self.chain: list = chain
+        self.chain: List[Block] = chain
         self.nodes = nodes
         self.capacity = capacity
         self.difficulty = difficulty
@@ -67,10 +67,10 @@ class Blockchain:
 
     def can_block_be_added(self, b: Block):
         previous_utxos = deepcopy(self.utxos_dict)
-        for k, v in previous_utxos.items():
-            print(k)
-            for i in v:
-                print(i)
+        # for k, v in previous_utxos.items():
+        #     print(k)
+        #     for i in v:
+        #         print(i)
 
         for t in b.list_of_transactions:
             for t_input in t.transaction_inputs:
@@ -150,9 +150,35 @@ class Blockchain:
         return False
 
     def validate_chain(self):
+        """
+
+        :return:
+        """
+        # Check hashes
         for idx, block in enumerate(self.chain[1:]):
             if not (block.validate_block(difficulty=self.difficulty) and self.chain[idx].current_hash == block.previousHash):
                 return False
+        # Check that utxos are indeed unspent throughout the blockchain
+        _utxos = {
+        }
+        genesis_transaction = self.chain[0].list_of_transactions[0]
+        _utxos[genesis_transaction.receiver_address] = [genesis_transaction.transaction_outputs[0]]
+        for b in self.chain[1:]:
+            for t in b.list_of_transactions:
+                for t_input in t.transaction_inputs:
+                    try:
+                        _utxos[t_input.recipient].remove(t_input)
+                    except Exception as e:
+                        print("BLOCK IS NOT VALID")
+                        print(e)
+                        print(t_input)
+                        return False
+                for t_output in t.transaction_outputs:
+                    try:
+                        _utxos[t_output.recipient].append(t_output)
+                    except KeyError:
+                        _utxos[t_output.recipient] = [t_output]
+
         return True
 
     def to_dict(self):

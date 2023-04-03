@@ -1,3 +1,5 @@
+import time
+
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
@@ -8,7 +10,7 @@ from typing import List
 
 class Transaction:
 
-    def __init__(self, sender_address: str, recipient_address: str, value: int, transaction_inputs: list, transaction_id="1", signature=None,
+    def __init__(self, sender_address: str, recipient_address: str, value: int, transaction_inputs: list, transaction_id=None, signature=None,
                  transaction_outputs=None):
         # Transaction()
         if transaction_outputs is None:
@@ -17,7 +19,10 @@ class Transaction:
         self.receiver_address = recipient_address
         self.amount = value
         self.signature = signature
-        self.transaction_id = transaction_id
+        if transaction_id is None:
+            self.transaction_id = f"{sender_address}_{recipient_address}_{value}_{time.time()}"
+        else:
+            self.transaction_id = transaction_id
         self.transaction_inputs: List[TransactionOutput] = transaction_inputs
         self.transaction_outputs: List[TransactionOutput] = transaction_outputs
 
@@ -100,3 +105,6 @@ class Transaction:
 
     def __str__(self):
         return f"sender_address: {self.sender_address}, receiver_address: {self.receiver_address}, amount: {self.amount}, signature: {self.signature}"
+
+    def get_small_str(self) -> str:
+        return f"{self.sender_address[-5:]} {self.receiver_address[-5:]} {self.amount} {self.transaction_id[-5:]}"

@@ -57,7 +57,7 @@ from inside the private network as well
 
 Unittest is used for testing
 
-From the /src diretory run
+From the `/src` diretory run
 
 ``python3 -m unittest discover -s ../tests/``
 
@@ -66,3 +66,11 @@ From the /src diretory run
 Below is the infrastructure we used for our benchmarks with 5 nodes (a similiar one was used for the case of 10 nodes)
 
 ![Infrastructure Diagram](docs/infrastructure.png)
+
+## Future Directions
+
+Some considerations that were not polished due to lack of time:
+
+- Explore optimal data structures for our use cases
+- Better testing/fix old testing code
+- Implement a UI for the end user as an addition to the CLI

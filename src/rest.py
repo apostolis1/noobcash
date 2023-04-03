@@ -138,6 +138,10 @@ def get_nodes_info():
 
 @app.route(rule="/utxos/all")
 def get_utxos():
+    """
+    Returns the current utxos for all nodes
+    :return:
+    """
     res = {}
     for k in node.blockchain.utxos_dict.keys():
         res[k] = [i.to_dict() for i in node.blockchain.utxos_dict[k]]
@@ -146,14 +150,21 @@ def get_utxos():
 
 @app.route(rule="/transaction_pool")
 def get_transaction_pool():
+    """
+    Returns the current transaction pool
+    :return:
+    """
     result = {"transactions": [t.to_dict() for t in transaction_pool]}
     return result, 200
 
 
 @app.route(rule="/block/get", methods=["POST"])
 def receive_block():
+    """
+    Endpoint where each node is waiting for blocks to be broadcasted
+    :return:
+    """
     with thread_lock:
-        # Endpoint where each node is waiting for blocks to be broadcasted
         # print("receive_block method has been called properly")
         block_dict = request.json
         block = block_from_dict(block_dict)
@@ -161,11 +172,13 @@ def receive_block():
         if block.current_hash is None:
             raise Exception("None current hash received")
         print(f"Mining value: {node.mining}")
+        pool_get_lock.acquire()
         utxos_lock.acquire()
         print("Utxos_lock acquired")
         blockchain_lock.acquire()
         print("Blockchain lock acquired")
         node.add_block_to_blockchain(block)
+        pool_get_lock.release()
         utxos_lock.release()
         print("Utxos lock released")
         blockchain_lock.release()
@@ -216,7 +229,7 @@ def get_balance_for_all_nodes():
     :return:
     """
     key_to_id = {}
-    for k,v in node.ring.items():
+    for k, v in node.ring.items():
         key_to_id[v["public_key"]] = k
     res = {}
     for k, utxos in node.blockchain.utxos_dict.items():
@@ -236,7 +249,7 @@ def all_nodes_here():
             "nodes": existing_nodes
         }
         requests.post(url=url, json=data)
-    time.sleep(1)
+    time.sleep(3)
     for receiving_node in existing_nodes.values():
         my_wallet: Wallet = node.wallet
         if receiving_node["public_key"] == my_wallet.public_key:
@@ -245,7 +258,6 @@ def all_nodes_here():
         utxos = node.my_utxos
         t = create_transaction(my_wallet, receiving_node["public_key"], 100, utxos)
         if t is None:
-
             print("Something went wrong")
         # TODO: perhaps this signing here is not needed as I sign the transaction
         t.sign_transaction(my_wallet.private_key)
@@ -254,7 +266,7 @@ def all_nodes_here():
         thread = threading.Thread(target=node.broadcast_transaction, args=[t])
         thread.start()
         thread.join()
-        time.sleep(3)
+        time.sleep(6)
 
 
 @app.route("/last_block/")
@@ -265,6 +277,7 @@ def get_last_block():
     """
     last_block = node.blockchain.getLastBlock()
     return last_block.to_dict(), 200
+
 
 @app.route("/blockchain_length/")
 def get_blockchain_length():
@@ -358,5 +371,5 @@ if __name__ == '__main__':
             node.my_utxos = deepcopy(node.blockchain.utxos_dict[node.wallet.address])
         except KeyError:
             node.my_utxos = []
-        
+
     app.run(host=node_ip, port=port, threaded=True)
