@@ -1,3 +1,14 @@
+# Noobcash
+
+This project was developed in the context of undergrad course "Distributed Systems" at NTUA
+
+It is a simple blockchain cryptocurrency, implemented with flask over REST API
+
+| Authors                                                              |
+|----------------------------------------------------------------------|
+| Apostolis Stamatis ([@apostolis1](https://github.com/apostolis1))    |
+| Dimitrios Mitropoulos ([@cnpapado](https://github.com/dimitrismit))  |
+
 ## Installation
 
 All the required packages are included in `requirements.txt`, simply install them with 
