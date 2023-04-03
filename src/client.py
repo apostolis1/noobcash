@@ -62,6 +62,8 @@ def create_transaction(args):
     res = requests.post(url=url, json=data)
     if res.status_code == 200:
         print("Successfully created transaction")
+    elif res.status_code == 402:
+        print("Insufficient funds, transaction not created")
     else:
         print(f"Something went wrong, got status code {res.status_code}")
     return
