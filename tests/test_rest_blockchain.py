@@ -9,6 +9,7 @@ MASTER_IP = f"{Config.MASTER_IP}:5000"
 
 
 class TestRestBlockchain(unittest.TestCase):
+
     def test_blockchain_hash_validity(self):
         """
         Test whether every node's previous_hash is indeed the current_hash of its predecessor
@@ -103,3 +104,17 @@ class TestRestBlockchain(unittest.TestCase):
             t_pool_len = len(t_pool['transactions'])
             print(f"Transaction pool from {base_url} len {t_pool_len}")
             assert t_pool_len == 0
+
+    def test_utxos_are_valid_throughout_chain(self):
+        url = f"http://{MASTER_IP}/nodes/all"
+        res = requests.get(url=url)
+
+        ring = res.json()
+        for url_node in ring.values():
+            base_url = url_node['url']
+            url = f"http://{base_url}/blockchain"
+            res = requests.get(url=url)
+            blockchain = blockchain_from_dict(res.json())
+            print(f"Validating chain for {url_node}")
+            assert blockchain.validate_chain()
+            print("Valid")

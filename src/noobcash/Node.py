@@ -66,18 +66,40 @@ class Node:
         if block.previousHash != self.blockchain.getLastBlock().current_hash:
             print("Block can't be placed at the end of blockchain")
             self.resolve_conflicts()
-            # TODO: We probably need to resolve_conflicts here, careful with locks and events
             return
-        # if block.validate_block(self.blockchain.difficulty) and self.blockchain.getLastBlock().current_hash == block.previousHash:
         if block.validate_block(self.blockchain.difficulty) and self.blockchain.can_block_be_added(block):
             print("Received a valid block, will check if I am mining already")
             if self.mining:
                 print("SET MINING TO FALSE")
                 self.mining = False
                 print("I am mining, will stop...")
-                # TODO: stop thread that mines since I received another already mined block
+                # Notify mining thread to stop since I received another already mined block
                 self.event.set()
                 print("Set event to true")
+                # Add transactions from current block back to pool, they will be removed if they are included in
+                # block we are adding right now
+                print("T pool before change has")
+                for t in self.transaction_pool:
+                    print(f"\t {t.get_small_str()}")
+                t_copy: list = deepcopy(self.blockchain.current_block.list_of_transactions)
+                t_copy.extend(self.transaction_pool)
+
+                print("T pool after adding elements has")
+                for t in t_copy:
+                    print(f"\t {t.get_small_str()}")
+
+                for t in block.list_of_transactions:
+                    try:
+                        t_copy.remove(t)
+                    except Exception as e:
+                        print("Skipping", e)
+                        pass
+                self.transaction_pool = t_copy
+
+                print("T pool after removing transactions")
+                for t in self.transaction_pool:
+                    print(f"\t {t.get_small_str()}")
+
                 self.blockchain.current_block = None
             else:
                 print("I am not mining, will add block")
